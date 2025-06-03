@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqueous - Bubble Synth</title>
+    <style>
+        @font-face {
+            font-family: 'Sailing Scribble';
+            src: url('sailing scribe font/SailingScribe-1jEYM.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(180deg, #001122 0%, #003366 50%, #004488 100%);
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .water-surface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #001133 0%, #001133 30%, #4da6ff 30%, #66b3ff 100%);
+            overflow: hidden;
+        }
+
+        .surface-line {
+            position: absolute;
+            top: 30%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .surface-line::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            border-top: 2px dotted rgba(0,200,255,0.4);
+        }
+
+        .wave-segment {
+            position: absolute;
+            width: 10%;
+            height: 4px;
+            background: #00ccff;
+            border-radius: 2px;
+        }
+
+        .wave-segment:nth-child(1) { left: 0%; animation: wave 3s ease-in-out infinite 0s; }
+        .wave-segment:nth-child(2) { left: 10%; animation: wave 3s ease-in-out infinite 0.3s; }
+        .wave-segment:nth-child(3) { left: 20%; animation: wave 3s ease-in-out infinite 0.6s; }
+        .wave-segment:nth-child(4) { left: 30%; animation: wave 3s ease-in-out infinite 0.9s; }
+        .wave-segment:nth-child(5) { left: 40%; animation: wave 3s ease-in-out infinite 1.2s; }
+        .wave-segment:nth-child(6) { left: 50%; animation: wave 3s ease-in-out infinite 1.5s; }
+        .wave-segment:nth-child(7) { left: 60%; animation: wave 3s ease-in-out infinite 1.8s; }
+        .wave-segment:nth-child(8) { left: 70%; animation: wave 3s ease-in-out infinite 2.1s; }
+        .wave-segment:nth-child(9) { left: 80%; animation: wave 3s ease-in-out infinite 2.4s; }
+        .wave-segment:nth-child(10) { left: 90%; animation: wave 3s ease-in-out infinite 2.7s; }
+
+        @keyframes wave {
+            0%, 100% { 
+                transform: translateY(0px);
+            }
+            25% { 
+                transform: translateY(-100px);
+            }
+            50% { 
+                transform: translateY(0px);
+            }
+            75% { 
+                transform: translateY(100px);
+            }
+        }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: #66ccff;
+            border: 2px solid #00ccff;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .bubble:hover {
+            background: #88ddff;
+            border-color: #0099cc;
+        }
+
+        .bubble.popping {
+            animation: surfacePop 0.8s ease-out forwards;
+        }
+
+        @keyframes surfacePop {
+            0% { 
+                transform: scale(1); 
+                opacity: 1; 
+            }
+            30% { 
+                transform: scale(1.8); 
+                opacity: 0.9;
+                background: #aaeeff;
+            }
+            100% { 
+                transform: scale(3.5); 
+                opacity: 0; 
+            }
+        }
+
+        .controls-top {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .bubble-controls {
+            position: absolute;
+            top: 80px;
+            right: 30px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+            background: rgba(0,50,100,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ccff;
+        }
+
+        .bubble-controls.active {
+            display: flex;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .control-label {
+            min-width: 100px;
+            color: #00ccff;
+            font-family: Arial, sans-serif;
+        }
+
+        .control-slider {
+            width: 120px;
+            height: 4px;
+            background: #004466;
+            border-radius: 2px;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ccff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .control-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #00ccff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .control-value {
+            min-width: 30px;
+            color: #88ddff;
+            font-size: 11px;
+        }
+
+        .control-btn {
+            background: #004466;
+            border: 2px solid #00ccff;
+            color: #00ccff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #006688;
+            border-color: #00aadd;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 64px;
+            font-weight: normal;
+            letter-spacing: 4px;
+            color: #00ccff;
+            z-index: 5;
+            font-family: Arial, sans-serif;
+        }
+
+        .status {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            transition: opacity 0.5s ease;
+            line-height: 1.4;
+        }
+
+        .status.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .frequency-labels {
+            position: absolute;
+            top: calc(30% - 25px); /* Position just above the surface line */
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="water-surface" id="waterSurface">
+            <div class="frequency-labels">
+                <span>200Hz</span>
+                <span>5kHz</span>
+            </div>
+            <div class="surface-line">
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+                <div class="wave-segment"></div>
+            </div>
+        </div>
+        
+        <div class="title">AQUEOUS</div>
+        
+        <div class="controls-top">
+            <button class="control-btn" id="startBubbles">Start</button>
+            <button class="control-btn" id="stopBubbles">Stop</button>
+        </div>
+        
+        <div class="bubble-controls" id="bubbleControls">
+            <div class="control-group">
+                <label class="control-label">Bubble Speed:</label>
+                <input class="control-slider" id="bubbleSpeed" type="range" min="0.5" max="2.5" value="1.5" step="0.1">
+                <span class="control-value" id="bubbleSpeedValue">1.5</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">Bubble Size:</label>
+                <input class="control-slider" id="bubbleSize" type="range" min="10" max="40" value="25" step="1">
+                <span class="control-value" id="bubbleSizeValue">25</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">Bubble Density:</label>
+                <input class="control-slider" id="bubbleDensity" type="range" min="0.5" max="2.5" value="1.2" step="0.1">
+                <span class="control-value" id="bubbleDensityValue">1.2</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">Split Chance:</label>
+                <input class="control-slider" id="bubbleSplit" type="range" min="0" max="0.5" value="0.1" step="0.05">
+                <span class="control-value" id="bubbleSplitValue">0.1</span>
+            </div>
+        </div>
+        
+        <div class="status" id="status">Press Start to Begin<br>Bubbles trigger sound when they pop and hit the surface</div>
+    </div>
+
+    <script>
+        // Global variables
+        let audioContext;
+        let oscillator;
+        let isPlaying = false;
+        let animationFrame;
+        let bubbleGenerationActive = true;
+        let bubbles = [];
+        let isInitialized = false;
+        
+        // Settings
+        let settings = {
+            bubbleSpeed: 1.5,
+            bubbleSize: 25,
+            bubbleDensity: 1.2,
+            bubbleSplit: 0.1,
+            bubbleLife: 5000,
+            delayTime: 0.5,
+            feedback: 0.4
+        };
+        
+        // Tide state
+        let isTideLeft = true;
+        let lastTideChange = Date.now();
+
+        // Initialize Web Audio API
+        async function initAudio() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Resume audio context on user interaction
+                    document.addEventListener('click', async () => {
+                        if (audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                    }, { once: true });
+                    
+                    isInitialized = true;
+                }
+                return true;
+            } catch (error) {
+                console.error('Error initializing audio:', error);
+                return false;
+            }
+        }
+
+        // Update waveform display
+        function updateWaveform() {
+            if (!analyserNode || !waveformCtx) return;
+            
+            const width = waveformCanvas.width;
+            const height = waveformCanvas.height;
+            
+            // Get time domain data
+            analyserNode.getFloatTimeDomainData(waveformData);
+            
+            // Clear canvas
+            waveformCtx.fillStyle = 'rgba(0, 20, 40, 0.9)';
+            waveformCtx.fillRect(0, 0, width, height);
+            
+            // Draw waveform
+            waveformCtx.lineWidth = 2;
+            waveformCtx.strokeStyle = '#00ccff';
+            waveformCtx.beginPath();
+            
+            const sliceWidth = width * 1.0 / waveformData.length;
+            let x = 0;
+            
+            for (let i = 0; i < waveformData.length; i++) {
+                const v = waveformData[i] * 0.5 + 0.5; // Normalize to 0-1
+                const y = v * height;
+                
+                if (i === 0) {
+                    waveformCtx.moveTo(x, y);
+                } else {
+                    waveformCtx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            waveformCtx.stroke();
+        }
+
+        // Start bubble generation
+        async function startBubbles() {
+            if (!isPlaying) {
+                if (!isInitialized) {
+                    await initAudio();
+                }
+                animate();
+                isPlaying = true;
+                document.getElementById('bubbleControls').classList.add('active');
+                document.getElementById('status').classList.add('hidden');
+            }
+        }
+
+        // Stop bubble generation and clear all bubbles
+        function stopBubbles() {
+            if (isPlaying) {
+                cancelAnimationFrame(animationFrame);
+                isPlaying = false;
+            }
+            
+            // Clear all bubbles from the array and DOM
+            bubbles.forEach(bubble => {
+                if (bubble.element && bubble.element.parentNode) {
+                    bubble.element.remove();
+                }
+            });
+            bubbles = [];
+            document.getElementById('bubbleControls').classList.remove('active');
+            document.getElementById('status').classList.remove('hidden');
+        }
+
+        // Create bubble at position
+        function createBubble(x, y, size = null) {
+            const waterSurface = document.getElementById('waterSurface');
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            const bubbleSize = size || settings.bubbleSize + (Math.random() * 10 - 5);
+            bubble.style.width = bubbleSize + 'px';
+            bubble.style.height = bubbleSize + 'px';
+            bubble.style.left = x + 'px';
+            bubble.style.top = y + 'px';
+            
+            bubble.addEventListener('click', () => popBubble(bubble));
+            
+            waterSurface.appendChild(bubble);
+            bubbles.push({
+                element: bubble,
+                x: x,
+                y: y,
+                size: bubbleSize,
+                speed: 0.5 + Math.random() * 0.5,
+                created: Date.now()
+            });
+        }
+
+        // Pop bubble and trigger audio
+        function popBubble(bubble) {
+            if (bubble.classList.contains('popping')) return;
+            
+            bubble.classList.add('popping');
+            
+            // Find bubble data and remove from array immediately
+            const bubbleIndex = bubbles.findIndex(b => b.element === bubble);
+            if (bubbleIndex !== -1) {
+                const bubbleData = bubbles[bubbleIndex];
+                
+                // Play audio based on position and size
+                const rect = document.getElementById('waterSurface').getBoundingClientRect();
+                const volume = Math.min(bubbleData.size / 40, 1); // Larger bubbles = louder
+                playTone(bubbleData.x, rect.width, volume);
+                
+                // Chance for bubble to split
+                if (Math.random() < settings.bubbleSplit && bubbleData.size > 15) {
+                    const splitSize = bubbleData.size * 0.6;
+                    setTimeout(() => {
+                        createBubble(bubbleData.x - 20, bubbleData.y, splitSize);
+                        createBubble(bubbleData.x + 20, bubbleData.y, splitSize);
+                    }, 200);
+                }
+                
+                // Remove from array immediately
+                bubbles.splice(bubbleIndex, 1);
+            }
+            
+            // Remove DOM element after animation
+            setTimeout(() => {
+                if (bubble.parentNode) {
+                    bubble.parentNode.removeChild(bubble);
+                }
+            }, 800);
+        }
+
+        // Update bubble positions
+        function updateBubbles() {
+            bubbles.forEach(bubbleData => {
+                bubbleData.y -= bubbleData.speed * settings.bubbleSpeed;
+                bubbleData.element.style.top = bubbleData.y + 'px';
+                
+                // Check if bubble reached surface (30% from top)
+                const surfaceY = window.innerHeight * 0.3;
+                if (bubbleData.y <= surfaceY) {
+                    popBubble(bubbleData.element);
+                }
+                
+                // Remove old bubbles
+                if (Date.now() - bubbleData.created > settings.bubbleLife) {
+                    if (bubbleData.element.parentNode) {
+                        bubbleData.element.parentNode.removeChild(bubbleData.element);
+                    }
+                }
+            });
+            
+            // Clean up removed bubbles
+            bubbles = bubbles.filter(bubbleData => 
+                bubbleData.element.parentNode && 
+                Date.now() - bubbleData.created <= settings.bubbleLife
+            );
+        }
+
+        // Generate random bubbles
+        function generateBubbles() {
+            if (!isPlaying || !bubbleGenerationActive) return;
+            
+            const chance = 0.02 * settings.bubbleDensity;
+            if (Math.random() < chance) {
+                const waterSurface = document.getElementById('waterSurface');
+                const x = Math.random() * waterSurface.offsetWidth;
+                const y = waterSurface.offsetHeight * 0.9;
+                createBubble(x, y);
+            }
+        }
+
+        // Play a sine tone when bubble pops
+        async function playTone(x, width, volume = 0.3) {
+            try {
+                if (!audioContext) {
+                    const success = await initAudio();
+                    if (!success) return;
+                }
+                
+                // Ensure audio context is running
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                // Calculate frequency based on x position (200Hz to 5000Hz) using logarithmic scale
+                const minFreq = 200;
+                const maxFreq = 5000;
+                const position = x / width; // 0 to 1
+                const frequency = minFreq * Math.pow(maxFreq / minFreq, position);
+                
+                // Create oscillator and gain node
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                // Configure oscillator
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                
+                // Configure gain envelope with volume control
+                gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                // Connect nodes
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Start and stop
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+            } catch (error) {
+                console.error('Error playing tone:', error);
+            }
+        }
+
+        // Main animation loop
+        function animate() {
+            updateBubbles();
+            generateBubbles();
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        document.getElementById('waterSurface').addEventListener('click', (e) => {
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Only create bubble if click is within water surface
+            if (y > rect.height * 0.3) {
+                createBubble(x, y);
+                // Play tone at click position
+                playTone(x, rect.width);
+            }
+        });
+        
+        // Start button
+        document.getElementById('startBubbles').addEventListener('click', startBubbles);
+        
+        // Stop button
+        document.getElementById('stopBubbles').addEventListener('click', stopBubbles);
+        
+        // Initialize everything
+        async function init() {
+            console.log('Initializing Aqueous...');
+            
+            // Initialize audio on first user interaction
+            document.addEventListener('click', async () => {
+                if (!isInitialized) {
+                    await initAudio();
+                }
+            }, { once: true });
+            
+            animate();
+            
+            console.log('Aqueous initialized');
+        }
+
+        // Start when page loads
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Bubble controls
+        document.getElementById('bubbleSpeed').addEventListener('input', (e) => {
+            settings.bubbleSpeed = parseFloat(e.target.value);
+            document.getElementById('bubbleSpeedValue').innerText = settings.bubbleSpeed.toFixed(1);
+        });
+        
+        document.getElementById('bubbleSize').addEventListener('input', (e) => {
+            settings.bubbleSize = parseInt(e.target.value);
+            document.getElementById('bubbleSizeValue').innerText = settings.bubbleSize;
+        });
+        
+        document.getElementById('bubbleDensity').addEventListener('input', (e) => {
+            settings.bubbleDensity = parseFloat(e.target.value);
+            document.getElementById('bubbleDensityValue').innerText = settings.bubbleDensity.toFixed(1);
+        });
+        
+        document.getElementById('bubbleSplit').addEventListener('input', (e) => {
+            settings.bubbleSplit = parseFloat(e.target.value);
+            document.getElementById('bubbleSplitValue').innerText = settings.bubbleSplit.toFixed(2);
+        });
+    </script>
+</body>
+</html>
