@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqueous - Granular Delay Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(180deg, #001122 0%, #003366 50%, #004488 100%);
+            font-family: 'Source Code Pro', monospace;
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .water-surface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center bottom, rgba(0,100,200,0.3) 0%, rgba(0,50,100,0.1) 70%, transparent 100%);
+            overflow: hidden;
+        }
+
+        .surface-line {
+            position: absolute;
+            top: 30%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, rgba(0,200,255,0.8) 50%, transparent 100%);
+            box-shadow: 0 0 20px rgba(0,200,255,0.5);
+            animation: surfaceShimmer 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes surfaceShimmer {
+            0% { opacity: 0.6; transform: scaleY(1); }
+            100% { opacity: 1; transform: scaleY(1.5); }
+        }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(100,200,255,0.4));
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bubble:hover {
+            transform: scale(1.2);
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(150,220,255,0.6));
+        }
+
+        .bubble.popping {
+            animation: surfacePop 0.8s ease-out forwards;
+        }
+
+        @keyframes surfacePop {
+            0% { 
+                transform: scale(1); 
+                opacity: 1; 
+            }
+            30% { 
+                transform: scale(1.8); 
+                opacity: 0.9;
+                background: radial-gradient(circle at 30% 30%, rgba(255,255,255,1), rgba(200,240,255,0.8));
+            }
+            100% { 
+                transform: scale(3.5); 
+                opacity: 0; 
+            }
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 25px;
+            background: rgba(0,20,40,0.9);
+            padding: 25px;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0,200,255,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        .slider {
+            width: 80px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.2);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00ccff, #0099cc);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,200,255,0.5);
+        }
+
+        .audio-controls {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: rgba(0,20,40,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0,200,255,0.2);
+            max-width: 300px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #00ccff, #0099cc);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,200,255,0.4);
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .preset-btn {
+            padding: 8px 15px;
+            background: rgba(0,200,255,0.2);
+            border: 1px solid rgba(0,200,255,0.3);
+            color: #00ccff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: 'Source Code Pro', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(0,200,255,0.3);
+            border-color: rgba(0,200,255,0.5);
+        }
+
+        .preset-btn.active {
+            background: rgba(0,200,255,0.5);
+            border-color: #00ccff;
+        }
+
+        .play-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00ccff, #0099cc);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px auto;
+            transition: all 0.3s ease;
+        }
+
+        .play-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 20px rgba(0,200,255,0.5);
+        }
+
+        .eq-display {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 200px;
+            height: 120px;
+            background: rgba(0,20,40,0.9);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0,200,255,0.2);
+        }
+
+        .eq-bars {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            height: 80px;
+            gap: 2px;
+        }
+
+        .eq-bar {
+            width: 10px;
+            background: linear-gradient(to top, rgba(0,51,102,0.5), #00ccff);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.1s ease;
+            box-shadow: 0 0 5px rgba(0,200,255,0.3);
+        }
+
+        .title {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-shadow: 0 2px 20px rgba(0,200,255,0.8);
+            background: linear-gradient(45deg, #00ccff, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            opacity: 0.7;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .waveform {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 60px;
+            background: rgba(0,20,40,0.9);
+            border-radius: 10px;
+            padding: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,200,255,0.2);
+        }
+
+        .wave-line {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(0,200,255,0.3) 50%, transparent 100%);
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wave-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(0,200,255,0.6), rgba(0,200,255,0.3));
+            width: 0%;
+            transition: width 0.1s linear;
+            border-radius: 5px;
+        }
+
+        .status {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            opacity: 0.6;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="water-surface" id="waterSurface">
+            <div class="surface-line"></div>
+        </div>
+        
+        <div class="title">AQUEOUS</div>
+        <div class="subtitle">Granular Delay Engine</div>
+        
+        <div class="audio-controls">
+            <input type="file" id="audioFile" class="file-input" accept="audio/*">
+            <label for="audioFile" class="file-label">Upload Audio</label>
+            
+            <div class="preset-buttons">
+                <button class="preset-btn" data-preset="choir">Choir</button>
+                <button class="preset-btn" data-preset="orcas">Orcas</button>
+            </div>
+            
+            <button class="play-button" id="playButton">▶</button>
+        </div>
+        
+        <div class="eq-display">
+            <div style="font-size: 11px; margin-bottom: 10px; text-align: center; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">Frequency Spectrum</div>
+            <div class="eq-bars" id="eqBars"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 9px; margin-top: 5px; opacity: 0.6; text-transform: uppercase;">
+                <span>Low</span>
+                <span>Mid</span>
+                <span>High</span>
+            </div>
+        </div>
+        
+        <div class="waveform">
+            <div class="wave-line">
+                <div class="wave-progress" id="waveProgress"></div>
+            </div>
+        </div>
+        
+        <div class="status" id="status">Upload audio or try presets - bubbles trigger sound when they pop</div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-label">Bubble Density</div>
+                <input type="range" class="slider" id="bubbleDensity" min="0.1" max="3" step="0.1" value="1.2">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Wave Drift</div>
+                <input type="range" class="slider" id="waveDrift" min="0" max="5" step="0.1" value="2.5">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Tidal Pull</div>
+                <input type="range" class="slider" id="tidalPull" min="0" max="4" step="0.1" value="1.5">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Delay Time</div>
+                <input type="range" class="slider" id="delayTime" min="0.1" max="2" step="0.05" value="0.5">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Feedback</div>
+                <input type="range" class="slider" id="feedback" min="0" max="0.9" step="0.05" value="0.4">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioContext;
+        let audioBuffer;
+        let sourceNode;
+        let analyserNode;
+        let delayNode;
+        let feedbackNode;
+        let gainNode;
+        let isPlaying = false;
+        let animationFrame;
+        
+        let bubbles = [];
+        let eqData = new Array(20).fill(0);
+        let freqData = new Uint8Array(2048);
+        
+        let settings = {
+            bubbleDensity: 1.2,
+            waveDrift: 2.5,
+            tidalPull: 1.5,
+            delayTime: 0.5,
+            feedback: 0.4
+        };
+
+        const surfaceY = window.innerHeight * 0.3;
+        
+        const presetUrls = {
+            orca: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwbEHJUPAeYTgkGEmpWrz' // Placeholder - would be actual orca audio
+        };
+
+        // Initialize Web Audio API
+        async function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create audio nodes
+                analyserNode = audioContext.createAnalyser();
+                analyserNode.fftSize = 2048;
+                
+                delayNode = audioContext.createDelay(2.0);
+                feedbackNode = audioContext.createGain();
+                gainNode = audioContext.createGain();
+                
+                // Connect delay feedback loop
+                delayNode.connect(feedbackNode);
+                feedbackNode.connect(delayNode);
+                
+                // Main signal path
+                delayNode.connect(gainNode);
+                gainNode.connect(analyserNode);
+                analyserNode.connect(audioContext.destination);
+                
+                updateAudioSettings();
+            } catch (error) {
+                console.error('Audio initialization failed:', error);
+                document.getElementById('status').textContent = 'Audio not available in this browser';
+            }
+        }
+
+        // Update audio effect settings
+        function updateAudioSettings() {
+            if (!audioContext) return;
+            
+            delayNode.delayTime.value = settings.delayTime;
+            feedbackNode.gain.value = settings.feedback;
+            gainNode.gain.value = 0.7;
+        }
+
+        // Load and play audio file
+        async function loadAudioFile(file) {
+            if (!audioContext) await initAudio();
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                document.getElementById('status').textContent = `Loaded: ${file.name}`;
+                
+                // Enable play button
+                document.getElementById('playButton').disabled = false;
+            } catch (error) {
+                console.error('Audio loading failed:', error);
+                document.getElementById('status').textContent = 'Failed to load audio file';
+            }
+        }
+
+        // Load preset audio - using placeholder URLs (you'll need real audio files)
+        async function loadPreset(presetName) {
+            const presets = {
+                'choir': 'audio/choir.wav',
+                'orcas': 'audio/orcas.mp3'
+            };
+
+            const audioFile = presets[presetName];
+            if (!audioFile) return;
+
+            // Clear existing audio
+            audioBuffer = null;
+            source = null;
+            gainNode.disconnect();
+            gainNode.connect(audioContext.destination);
+
+            // Load new audio
+            fetch(audioFile)
+                .then(response => response.arrayBuffer())
+                .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+                .then(buffer => {
+                    audioBuffer = buffer;
+                    source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(gainNode);
+                    source.start();
+                    source.loop = true;
+                    
+                    // Update UI
+                    document.querySelector('.preset-btn.active').classList.remove('active');
+                    document.querySelector(`.preset-btn[data-preset="${presetName}"]`).classList.add('active');
+                })
+                .catch(error => console.error('Error loading preset:', error));
+        }
+
+        // Play/stop is now for controlling bubble generation
+        function togglePlayback() {
+            isPlaying = !isPlaying;
+            
+            if (isPlaying) {
+                document.getElementById('playButton').textContent = '⏸';
+                document.getElementById('status').textContent = 'Bubbles active - they will trigger audio when popping';
+            } else {
+                document.getElementById('playButton').textContent = '▶';
+                document.getElementById('status').textContent = 'Bubbles paused';
+            }
+        }
+
+        // Initialize EQ bars
+        function initEQ() {
+            const eqBars = document.getElementById('eqBars');
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'eq-bar';
+                bar.style.height = '10%';
+                eqBars.appendChild(bar);
+            }
+        }
+
+        // Update EQ display based on audio analysis
+        function updateEQ() {
+            if (analyserNode && isPlaying) {
+                analyserNode.getByteFrequencyData(freqData);
+                
+                // Map frequency data to EQ bars
+                for (let i = 0; i < 20; i++) {
+                    const freqIndex = Math.floor((i / 20) * (freqData.length / 4));
+                    const value = freqData[freqIndex] / 255 * 100;
+                    eqData[i] = value;
+                }
+            }
+            
+            // Update visual bars
+            const bars = document.querySelectorAll('.eq-bar');
+            bars.forEach((bar, index) => {
+                const targetHeight = Math.max(eqData[index], 10);
+                const currentHeight = parseFloat(bar.style.height) || 10;
+                const newHeight = currentHeight + (targetHeight - currentHeight) * 0.1;
+                bar.style.height = newHeight + '%';
+                
+                // Decay
+                if (!isPlaying || !analyserNode) {
+                    eqData[index] *= 0.95;
+                }
+            });
+        }
+
+        // Create bubble at position
+        function createBubble(x, y) {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            const size = Math.random() * 50 + 15;
+            bubble.style.width = size + 'px';
+            bubble.style.height = size + 'px';
+            bubble.style.left = (x - size/2) + 'px';
+            bubble.style.top = (y - size/2) + 'px';
+            
+            // Calculate EQ position
+            const eqIndex = Math.floor((x / window.innerWidth) * 20);
+            if (isPlaying) {
+                eqData[eqIndex] = Math.min(eqData[eqIndex] + 60, 100);
+            }
+            
+            const bubbleData = {
+                element: bubble,
+                x: x,
+                y: y,
+                originalX: x,
+                originalY: y,
+                size: size,
+                age: 0,
+                life: Math.random() * 4000 + 3000,
+                driftX: (Math.random() - 0.5) * 2,
+                driftY: (Math.random() - 0.5) * 0.3,
+                eqIndex: eqIndex,
+                velocity: 0.5 + Math.random() * 0.5
+            };
+            
+            bubble.addEventListener('click', () => popBubble(bubbleData));
+            
+            document.getElementById('waterSurface').appendChild(bubble);
+            bubbles.push(bubbleData);
+        }
+
+        // Pop bubble at surface and trigger audio
+        function popBubble(bubbleData) {
+            bubbleData.element.classList.add('popping');
+            
+            // Trigger audio sample when bubble pops
+            if (audioBuffer && audioContext) {
+                playAudioSample(bubbleData.eqIndex);
+            }
+            
+            // Update EQ for visual feedback
+            eqData[bubbleData.eqIndex] = Math.min(eqData[bubbleData.eqIndex] + 80, 100);
+            
+            setTimeout(() => {
+                if (bubbleData.element.parentNode) {
+                    bubbleData.element.parentNode.removeChild(bubbleData.element);
+                }
+                const index = bubbles.indexOf(bubbleData);
+                if (index > -1) bubbles.splice(index, 1);
+            }, 800);
+        }
+
+        // Play a small sample of the audio when bubble pops
+        function playAudioSample(eqIndex) {
+            if (!audioContext || !audioBuffer) return;
+            
+            try {
+                // Resume audio context if suspended
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                // Create a short sample (0.5 seconds)
+                const sampleDuration = 0.5;
+                const sampleRate = audioContext.sampleRate;
+                const sampleBuffer = audioContext.createBuffer(
+                    audioBuffer.numberOfChannels, 
+                    sampleDuration * sampleRate, 
+                    sampleRate
+                );
+                
+                // Copy a portion of the original buffer based on EQ position
+                const startOffset = (eqIndex / 20) * (audioBuffer.length - sampleDuration * sampleRate);
+                
+                for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                    const originalData = audioBuffer.getChannelData(channel);
+                    const sampleData = sampleBuffer.getChannelData(channel);
+                    
+                    for (let i = 0; i < sampleData.length; i++) {
+                        const sourceIndex = Math.floor(startOffset + i);
+                        if (sourceIndex < originalData.length) {
+                            sampleData[i] = originalData[sourceIndex];
+                        }
+                    }
+                }
+                
+                // Create source and apply effects
+                const sampleSource = audioContext.createBufferSource();
+                sampleSource.buffer = sampleBuffer;
+                
+                // Create individual delay and feedback for this sample
+                const sampleDelay = audioContext.createDelay(2.0);
+                const sampleFeedback = audioContext.createGain();
+                const sampleGain = audioContext.createGain();
+                
+                sampleDelay.delayTime.value = settings.delayTime;
+                sampleFeedback.gain.value = settings.feedback * 0.6; // Reduce feedback for samples
+                sampleGain.gain.value = 0.4;
+                
+                // Connect delay feedback loop
+                sampleDelay.connect(sampleFeedback);
+                sampleFeedback.connect(sampleDelay);
+                
+                // Connect to output
+                sampleSource.connect(sampleDelay);
+                sampleSource.connect(sampleGain);
+                sampleDelay.connect(sampleGain);
+                sampleGain.connect(analyserNode);
+                
+                sampleSource.start();
+                
+                // Clean up after sample finishes
+                setTimeout(() => {
+                    sampleSource.disconnect();
+                    sampleDelay.disconnect();
+                    sampleFeedback.disconnect();
+                    sampleGain.disconnect();
+                }, (sampleDuration + settings.delayTime * 3) * 1000);
+                
+            } catch (error) {
+                console.error('Sample playback failed:', error);
+            }
+        }
+
+        // Update bubble positions
+        function updateBubbles() {
+            const time = Date.now() * 0.001;
+            
+            bubbles.forEach(bubble => {
+                bubble.age += 16;
+                
+                // Wave drift
+                const driftAmount = settings.waveDrift * 0.3;
+                bubble.x += bubble.driftX * driftAmount;
+                
+                // Tidal pull
+                const tidalOffset = Math.sin(time * 0.4 + bubble.originalX * 0.008) * settings.tidalPull * 15;
+                bubble.x = bubble.originalX + tidalOffset + (bubble.x - bubble.originalX) * 0.98;
+                
+                // Float upward much faster
+                bubble.y -= bubble.velocity * 3;
+                
+                // Update position
+                bubble.element.style.left = (bubble.x - bubble.size/2) + 'px';
+                bubble.element.style.top = (bubble.y - bubble.size/2) + 'px';
+                
+                // Pop when reaching surface
+                if (bubble.y <= surfaceY + 10) {
+                    popBubble(bubble);
+                }
+                
+                // Remove if too old
+                if (bubble.age > bubble.life) {
+                    const index = bubbles.indexOf(bubble);
+                    if (index > -1) {
+                        bubble.element.remove();
+                        bubbles.splice(index, 1);
+                    }
+                }
+            });
+        }
+
+        // Generate random bubbles 
+        function generateBubbles() {
+            const spawnRate = settings.bubbleDensity * 0.02;
+            
+            if (Math.random() < spawnRate) {
+                const x = Math.random() * window.innerWidth;
+                const y = window.innerHeight + Math.random() * 50;
+                createBubble(x, y);
+            }
+        }
+
+        // Main animation loop
+        function animate() {
+            updateBubbles();
+            generateBubbles();
+            updateEQ();
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        document.getElementById('waterSurface').addEventListener('click', (e) => {
+            createBubble(e.clientX, e.clientY);
+        });
+
+        document.getElementById('audioFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadAudioFile(file);
+            }
+        });
+
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                loadPreset(btn.dataset.preset);
+            });
+        });
+
+        document.getElementById('playButton').addEventListener('click', togglePlayback);
+
+        // Control sliders
+        document.getElementById('bubbleDensity').addEventListener('input', (e) => {
+            settings.bubbleDensity = parseFloat(e.target.value);
+        });
+
+        document.getElementById('waveDrift').addEventListener('input', (e) => {
+            settings.waveDrift = parseFloat(e.target.value);
+        });
+
+        document.getElementById('tidalPull').addEventListener('input', (e) => {
+            settings.tidalPull = parseFloat(e.target.value);
+        });
+
+        document.getElementById('delayTime').addEventListener('input', (e) => {
+            settings.delayTime = parseFloat(e.target.value);
+            updateAudioSettings();
+        });
+
+        document.getElementById('feedback').addEventListener('input', (e) => {
+            settings.feedback = parseFloat(e.target.value);
+            updateAudioSettings();
+        });
+
+        // Initialize
+        initEQ();
+        animate();
+
+        // Create some initial bubbles
+        setTimeout(() => {
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const x = Math.random() * window.innerWidth;
+                    const y = window.innerHeight * 0.9 + Math.random() * 100;
+                    createBubble(x, y);
+                }, i * 800);
+            }
+        }, 1500);
+    </script>
+</body>
+</html>
