@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Granular Bubble Synthesizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #1a1a2e;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        canvas {
+            background: #16213e;
+            cursor: crosshair;
+        }
+        
+        .surface-line {
+            display: none; /* We'll draw the wave in canvas */
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        select,         input[type="range"], input[type="checkbox"] {
+            background: #2d2d2d;
+            color: #eee;
+            border: 1px solid #444;
+            padding: 5px;
+            font-family: Arial, sans-serif;
+        }
+        
+        input[type="range"] {
+            width: 80px;
+        }
+        
+        .audio-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 12px;
+            color: #888;
+            z-index: 20;
+        }
+        
+        .instructions {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+        <div class="surface-line"></div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Audio Source</label>
+                <select id="audioSelect">
+                    <option value="orcas">Orcas</option>
+                    <option value="choir">Choir</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Grain Size</label>
+                <input type="range" id="grainSize" min="20" max="200" value="100">
+            </div>
+            
+            <div class="control-group">
+                <label>Overlap</label>
+                <input type="range" id="overlap" min="0" max="5" value="2" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Speed</label>
+                <input type="range" id="speed" min="0.1" max="3" value="1" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Tide Strength</label>
+                <input type="range" id="tideStrength" min="0" max="5" value="2" step="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Auto Bubbles</label>
+                <input type="checkbox" id="autoBubbles" checked>
+            </div>
+        </div>
+        
+        <div class="audio-info">
+            Audio files should be placed in:<br>
+            /audio/orcas.mp3 and /audio/choir.wav<br>
+            Currently using demo oscillator tones
+        </div>
+    </div>
+
+    <script>
+        class GranularBubbleSynth {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.audioContext = null;
+                this.audioBuffers = {};
+                this.bubbles = [];
+                this.surfaceY = 150;
+                this.waveOffset = 0;
+                this.autoBubblesEnabled = true;
+                this.lastAutoBubble = 0;
+                
+                this.grainSize = 100;
+                this.overlap = 2;
+                this.speed = 1;
+                this.tideStrength = 2;
+                this.currentSource = 'orcas';
+                
+                this.setupCanvas();
+                this.setupAudio();
+                this.setupControls();
+                this.animate();
+            }
+            
+            setupCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                
+                this.canvas.addEventListener('click', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    this.createBubble(x, y);
+                });
+                
+                window.addEventListener('resize', () => {
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                });
+            }
+            
+            async setupAudio() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                await this.loadAudioFiles();
+            }
+            
+            async loadAudioFiles() {
+                // Demo oscillator buffers since we don't have actual files
+                const sampleRate = this.audioContext.sampleRate;
+                const duration = 3; // 3 seconds
+                const bufferLength = sampleRate * duration;
+                
+                // Create demo "orcas" buffer (low frequency sweeps)
+                const orcasBuffer = this.audioContext.createBuffer(1, bufferLength, sampleRate);
+                const orcasData = orcasBuffer.getChannelData(0);
+                for (let i = 0; i < bufferLength; i++) {
+                    const t = i / sampleRate;
+                    const freq = 200 + Math.sin(t * 2) * 100;
+                    orcasData[i] = Math.sin(2 * Math.PI * freq * t) * 0.3 * Math.exp(-t * 0.5);
+                }
+                this.audioBuffers.orcas = orcasBuffer;
+                
+                // Create demo "choir" buffer (harmonic tones)
+                const choirBuffer = this.audioContext.createBuffer(1, bufferLength, sampleRate);
+                const choirData = choirBuffer.getChannelData(0);
+                for (let i = 0; i < bufferLength; i++) {
+                    const t = i / sampleRate;
+                    const fundamental = 220;
+                    let sample = 0;
+                    sample += Math.sin(2 * Math.PI * fundamental * t) * 0.3;
+                    sample += Math.sin(2 * Math.PI * fundamental * 1.5 * t) * 0.2;
+                    sample += Math.sin(2 * Math.PI * fundamental * 2 * t) * 0.1;
+                    choirData[i] = sample * Math.exp(-t * 0.3);
+                }
+                this.audioBuffers.choir = choirBuffer;
+            }
+            
+            setupControls() {
+                document.getElementById('audioSelect').addEventListener('change', (e) => {
+                    this.currentSource = e.target.value;
+                });
+                
+                document.getElementById('grainSize').addEventListener('input', (e) => {
+                    this.grainSize = parseInt(e.target.value);
+                });
+                
+                document.getElementById('overlap').addEventListener('input', (e) => {
+                    this.overlap = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('speed').addEventListener('input', (e) => {
+                    this.speed = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('tideStrength').addEventListener('input', (e) => {
+                    this.tideStrength = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('autoBubbles').addEventListener('change', (e) => {
+                    this.autoBubblesEnabled = e.target.checked;
+                });
+            }
+            
+            createBubble(x, y) {
+                const bubble = {
+                    x: x,
+                    y: y,
+                    startY: y,
+                    size: Math.random() * 20 + 10,
+                    speed: Math.random() * 2 + 1,
+                    opacity: 1,
+                    color: this.getRandomColor(),
+                    hasPopped: false
+                };
+                this.bubbles.push(bubble);
+            }
+            
+            getRandomColor() {
+                const colors = ['#00d4ff', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            async playGrain(startTime = 0) {
+                if (!this.audioContext || this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                }
+                
+                const buffer = this.audioBuffers[this.currentSource];
+                if (!buffer) return;
+                
+                const source = this.audioContext.createBufferSource();
+                const gainNode = this.audioContext.createGain();
+                
+                source.buffer = buffer;
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                // Granular parameters
+                const grainDuration = this.grainSize / 1000; // Convert ms to seconds
+                const randomStart = Math.random() * (buffer.duration - grainDuration);
+                
+                // Envelope for grain
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.5, this.audioContext.currentTime + grainDuration * 0.1);
+                gainNode.gain.linearRampToValueAtTime(0.5, this.audioContext.currentTime + grainDuration * 0.9);
+                gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + grainDuration);
+                
+                source.playbackRate.value = this.speed;
+                source.start(this.audioContext.currentTime, randomStart, grainDuration);
+                source.stop(this.audioContext.currentTime + grainDuration);
+            }
+            
+            popBubble() {
+                // Play multiple overlapping grains for the pop effect
+                const grainCount = Math.floor(this.overlap * 3);
+                for (let i = 0; i < grainCount; i++) {
+                    setTimeout(() => {
+                        this.playGrain();
+                    }, i * (this.grainSize / this.overlap / 4));
+                }
+            }
+            
+            updateBubbles() {
+                const currentTime = Date.now();
+                
+                // Auto-generate bubbles
+                if (this.autoBubblesEnabled && currentTime - this.lastAutoBubble > 1500) {
+                    const x = Math.random() * this.canvas.width;
+                    const y = this.canvas.height - Math.random() * 200;
+                    this.createBubble(x, y);
+                    this.lastAutoBubble = currentTime;
+                }
+                
+                // Update wave animation
+                this.waveOffset += 0.02;
+                
+                for (let i = this.bubbles.length - 1; i >= 0; i--) {
+                    const bubble = this.bubbles[i];
+                    
+                    // Calculate wave surface Y at bubble's X position
+                    const waveY = this.surfaceY + Math.sin((bubble.x / 100) + this.waveOffset) * 8;
+                    
+                    // Move bubble up
+                    bubble.y -= bubble.speed;
+                    
+                    // Apply tide (horizontal movement)
+                    const tideForce = Math.sin(this.waveOffset * 0.7 + bubble.x / 200) * this.tideStrength;
+                    bubble.x += tideForce;
+                    
+                    // Keep bubbles within screen bounds
+                    if (bubble.x < 0) bubble.x = this.canvas.width;
+                    if (bubble.x > this.canvas.width) bubble.x = 0;
+                    
+                    // Check if bubble reached surface
+                    if (bubble.y <= waveY && !bubble.hasPopped) {
+                        bubble.hasPopped = true;
+                        this.popBubble();
+                        // Remove immediately when it hits surface
+                        this.bubbles.splice(i, 1);
+                        continue;
+                    }
+                    
+                    // Remove bubble if it's way off screen
+                    if (bubble.y < -100) {
+                        this.bubbles.splice(i, 1);
+                        continue;
+                    }
+                }
+            }
+            
+            drawBubbles() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw solid sky (bright blue above wave)
+                this.ctx.fillStyle = '#87CEEB';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.surfaceY + 50);
+                
+                // Draw ocean with ombre fade
+                const oceanGradient = this.ctx.createLinearGradient(0, this.surfaceY, 0, this.canvas.height);
+                oceanGradient.addColorStop(0, '#16213e');
+                oceanGradient.addColorStop(0.3, '#0f1729');
+                oceanGradient.addColorStop(0.7, '#0a0f1a');
+                oceanGradient.addColorStop(1, '#05070d');
+                this.ctx.fillStyle = oceanGradient;
+                this.ctx.fillRect(0, this.surfaceY, this.canvas.width, this.canvas.height);
+                
+                // Draw animated wave surface
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, this.surfaceY);
+                for (let x = 0; x <= this.canvas.width; x += 2) {
+                    const y = this.surfaceY + Math.sin((x / 100) + this.waveOffset) * 8;
+                    this.ctx.lineTo(x, y);
+                }
+                this.ctx.strokeStyle = '#00d4ff';
+                this.ctx.lineWidth = 3;
+                this.ctx.shadowBlur = 10;
+                this.ctx.shadowColor = '#00d4ff';
+                this.ctx.stroke();
+                this.ctx.shadowBlur = 0;
+                
+                // Draw bubbles
+                for (const bubble of this.bubbles) {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = bubble.opacity;
+                    
+                    // Draw bubble
+                    this.ctx.beginPath();
+                    this.ctx.arc(bubble.x, bubble.y, bubble.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = bubble.color;
+                    this.ctx.fill();
+                    
+                    // Draw bubble outline
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    // Add highlight
+                    this.ctx.beginPath();
+                    this.ctx.arc(bubble.x - bubble.size * 0.3, bubble.y - bubble.size * 0.3, bubble.size * 0.2, 0, Math.PI * 2);
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    this.ctx.fill();
+                    
+                    this.ctx.restore();
+                }
+            }
+            
+            animate() {
+                this.updateBubbles();
+                this.drawBubbles();
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // Initialize the synthesizer
+        const synth = new GranularBubbleSynth();
+    </script>
+</body>
+</html>
