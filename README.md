@@ -28,3 +28,7 @@ https://www.fontspace.com/sailing-scribe-font-f126927
    ![Screenshot 2025-08-08 at 12 45 10 PM](https://github.com/user-attachments/assets/184c4590-3a77-4248-9876-6e735c9e1f57)
 
 7. Select the IAC Driver as the MIDI device in your DAW
+
+   Example of a MIDI track set to the IAC Driver in Ableton:
+   
+   ![Screenshot 2025-08-08 at 12 53 43 PM](https://github.com/user-attachments/assets/a1061dfd-57c1-49f7-92b7-2910733abb35)
