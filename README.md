@@ -12,3 +12,13 @@ https://freesound.org/people/GregorQuendel/sounds/685055/
 
 Font is:
 https://www.fontspace.com/sailing-scribe-font-f126927
+
+## Instructions for Mac IAC Driver (Virtual Midi) Setup:
+
+1. Cmd + Space search for Audio Midi Setup and open it
+   ![Screenshot 2025-08-08 at 12 46 29 PM](https://github.com/user-attachments/assets/15ca6575-2c78-4403-ab94-e0876ab94f29)
+2. Select the IAC Driver
+   ![Screenshot 2025-08-08 at 12 45 02 PM](https://github.com/user-attachments/assets/6ac8a28e-912e-432a-87fd-5244222d2c18)
+3. Check "Device is online", make sure at least one bus exists (use the "+" to add one if needed).
+   ![Screenshot 2025-08-08 at 12 45 02 PM](https://github.com/user-attachments/assets/ee80dc5c-53d3-41f4-87fb-05440c80c323)
+4. Select the IAC Driver as the MIDI device in your DAW
