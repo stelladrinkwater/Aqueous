@@ -24,7 +24,7 @@ https://www.fontspace.com/sailing-scribe-font-f126927
    ![Screenshot 2025-08-08 at 12 45 02 PM](https://github.com/user-attachments/assets/6ac8a28e-912e-432a-87fd-5244222d2c18)
    
 5. Check "Device is online", make sure at least one bus exists (use the "+" to add one if needed).
-   
-   ![Screenshot 2025-08-08 at 12 45 02 PM](https://github.com/user-attachments/assets/ee80dc5c-53d3-41f4-87fb-05440c80c323)
+
+   ![Screenshot 2025-08-08 at 12 45 10 PM](https://github.com/user-attachments/assets/184c4590-3a77-4248-9876-6e735c9e1f57)
 
 7. Select the IAC Driver as the MIDI device in your DAW
