@@ -252,7 +252,7 @@
 
         .frequency-labels {
             position: absolute;
-            top: calc(30% - 25px); /* Position just above the surface line */
+            top: calc(30% - 25px);
             left: 0;
             right: 0;
             display: flex;
@@ -260,6 +260,30 @@
             padding: 0 20px;
             color: rgba(255,255,255,0.7);
             font-size: 12px;
+        }
+
+        .debug-panel {
+            position: absolute;
+            top: 150px;
+            right: 30px;
+            background: rgba(0,30,60,0.9);
+            border: 1px solid #00ccff;
+            border-radius: 10px;
+            padding: 15px;
+            max-width: 300px;
+            font-size: 11px;
+            color: #88ddff;
+            z-index: 20;
+        }
+
+        .debug-panel h4 {
+            margin-top: 0;
+            color: #00ccff;
+        }
+
+        .debug-info {
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
         }
     </style>
 </head>
@@ -287,8 +311,19 @@
         <div class="title">AQUEOUS</div>
         
         <div class="controls-top">
+            <div class="control-group" style="margin-right: 15px;">
+                <select id="midiOutputSelect" class="control-btn" style="min-width: 180px;">
+                    <option value="">-- Select MIDI Output --</option>
+                </select>
+            </div>
             <button class="control-btn" id="startBubbles">Start</button>
             <button class="control-btn" id="stopBubbles">Stop</button>
+            <button class="control-btn" id="refreshMIDI">Refresh MIDI</button>
+        </div>
+        
+        <div class="debug-panel" id="debugPanel">
+            <h4>MIDI Debug Info</h4>
+            <div class="debug-info" id="debugInfo">Initializing...</div>
         </div>
         
         <div class="bubble-controls" id="bubbleControls">
@@ -326,6 +361,8 @@
         let bubbleGenerationActive = true;
         let bubbles = [];
         let isInitialized = false;
+        let selectedMIDIOutput = null;
+        let midiAccess = null;
         
         // Settings
         let settings = {
@@ -342,6 +379,187 @@
         let isTideLeft = true;
         let lastTideChange = Date.now();
 
+        // Debug logging function
+        function debugLog(message) {
+            console.log('[MIDI Debug]:', message);
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugInfo) {
+                debugInfo.innerHTML += '<br>' + message;
+                debugInfo.scrollTop = debugInfo.scrollHeight;
+            }
+        }
+
+        // Show status message
+        function showStatus(message, duration = 3000) {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.classList.remove('hidden');
+            if (duration > 0) {
+                setTimeout(() => {
+                    status.classList.add('hidden');
+                }, duration);
+            }
+        }
+
+        // Initialize Web MIDI API with better error handling
+        async function initMIDI() {
+            debugLog('Checking MIDI support...');
+            
+            try {
+                if (!navigator.requestMIDIAccess) {
+                    debugLog('❌ Web MIDI API not supported in this browser');
+                    showStatus('Web MIDI is not supported in your browser', 0);
+                    return false;
+                }
+                
+                debugLog('✅ Web MIDI API supported, requesting access...');
+                
+                // Request MIDI access with sysex: true for better compatibility
+                midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+                
+                debugLog('✅ MIDI access granted');
+                debugLog(`Inputs found: ${midiAccess.inputs.size}`);
+                debugLog(`Outputs found: ${midiAccess.outputs.size}`);
+                
+                // List all available inputs and outputs for debugging
+                debugLog('--- Available MIDI Inputs ---');
+                midiAccess.inputs.forEach((input, key) => {
+                    debugLog(`Input: ${input.name} (${input.id}) - ${input.state}`);
+                });
+                
+                debugLog('--- Available MIDI Outputs ---');
+                midiAccess.outputs.forEach((output, key) => {
+                    debugLog(`Output: ${output.name} (${output.id}) - ${output.state}`);
+                });
+                
+                updateMIDIPortList();
+                
+                // Listen for MIDI device changes
+                midiAccess.onstatechange = (event) => {
+                    debugLog(`MIDI device state changed: ${event.port.name} - ${event.port.state}`);
+                    updateMIDIPortList();
+                };
+                
+                return true;
+            } catch (error) {
+                debugLog('❌ Error initializing MIDI: ' + error.message);
+                console.error('Error initializing MIDI:', error);
+                showStatus('Error initializing MIDI: ' + error.message, 0);
+                return false;
+            }
+        }
+        
+        // Update the MIDI port dropdown with better debugging
+        function updateMIDIPortList() {
+            const select = document.getElementById('midiOutputSelect');
+            if (!select) {
+                debugLog('❌ MIDI select element not found');
+                return;
+            }
+            
+            debugLog('Updating MIDI port list...');
+            
+            // Save current selection
+            const currentId = select.value;
+            
+            // Clear existing options
+            select.innerHTML = '<option value="">-- Select MIDI Output --</option>';
+            
+            if (!midiAccess) {
+                debugLog('❌ No MIDI access available');
+                return;
+            }
+            
+            // Add available outputs
+            const outputs = Array.from(midiAccess.outputs.values());
+            debugLog(`Found ${outputs.length} MIDI outputs`);
+            
+            let foundPrevious = false;
+            let addedCount = 0;
+            
+            outputs.forEach(output => {
+                debugLog(`Adding output: ${output.name} (${output.id}) - state: ${output.state}`);
+                
+                // Only add connected outputs
+                if (output.state === 'connected') {
+                    const option = document.createElement('option');
+                    option.value = output.id;
+                    option.textContent = output.name || output.id;
+                    select.appendChild(option);
+                    addedCount++;
+                    
+                    if (output.id === currentId) {
+                        option.selected = true;
+                        foundPrevious = true;
+                        selectedMIDIOutput = output;
+                    }
+                }
+            });
+            
+            debugLog(`Added ${addedCount} connected MIDI outputs to dropdown`);
+            
+            // If previous selection is no longer available, clear it
+            if (currentId && !foundPrevious) {
+                selectedMIDIOutput = null;
+                debugLog('Previous MIDI selection no longer available');
+            }
+        }
+        
+        // Handle MIDI output selection
+        function onMIDIOutputChange(event) {
+            const select = event.target;
+            const selectedId = select.value;
+            
+            debugLog(`MIDI output selection changed to: ${selectedId}`);
+            
+            if (!selectedId) {
+                selectedMIDIOutput = null;
+                debugLog('MIDI output cleared');
+                return;
+            }
+            
+            const output = midiAccess.outputs.get(selectedId);
+            if (output) {
+                selectedMIDIOutput = output;
+                debugLog(`✅ MIDI output selected: ${output.name || output.id}`);
+                showStatus(`MIDI output: ${output.name || output.id}`, 2000);
+            } else {
+                debugLog('❌ Selected MIDI output not found');
+            }
+        }
+        
+        // Send MIDI note with debugging
+        function sendMIDINote(note, velocity, duration = 300) {
+            if (!selectedMIDIOutput) {
+                debugLog('❌ No MIDI output selected');
+                return;
+            }
+            
+            debugLog(`Sending MIDI note: ${note}, velocity: ${velocity}, duration: ${duration}ms`);
+            
+            try {
+                // Note on (0x90 = note on, channel 1)
+                selectedMIDIOutput.send([0x90, note, velocity]);
+                debugLog(`✅ MIDI note on sent: ${note}`);
+                
+                // Note off after duration
+                setTimeout(() => {
+                    if (selectedMIDIOutput) {
+                        selectedMIDIOutput.send([0x80, note, 0]);
+                        debugLog(`✅ MIDI note off sent: ${note}`);
+                    }
+                }, duration);
+            } catch (error) {
+                debugLog(`❌ Error sending MIDI note: ${error.message}`);
+            }
+        }
+        
+        // Manual refresh function
+        function refreshMIDI() {
+            debugLog('=== Manual MIDI Refresh ===');
+            initMIDI();
+        }
+        
         // Initialize Web Audio API
         async function initAudio() {
             try {
@@ -364,53 +582,38 @@
             }
         }
 
-        // Update waveform display
-        function updateWaveform() {
-            if (!analyserNode || !waveformCtx) return;
-            
-            const width = waveformCanvas.width;
-            const height = waveformCanvas.height;
-            
-            // Get time domain data
-            analyserNode.getFloatTimeDomainData(waveformData);
-            
-            // Clear canvas
-            waveformCtx.fillStyle = 'rgba(0, 20, 40, 0.9)';
-            waveformCtx.fillRect(0, 0, width, height);
-            
-            // Draw waveform
-            waveformCtx.lineWidth = 2;
-            waveformCtx.strokeStyle = '#00ccff';
-            waveformCtx.beginPath();
-            
-            const sliceWidth = width * 1.0 / waveformData.length;
-            let x = 0;
-            
-            for (let i = 0; i < waveformData.length; i++) {
-                const v = waveformData[i] * 0.5 + 0.5; // Normalize to 0-1
-                const y = v * height;
-                
-                if (i === 0) {
-                    waveformCtx.moveTo(x, y);
-                } else {
-                    waveformCtx.lineTo(x, y);
-                }
-                
-                x += sliceWidth;
-            }
-            
-            waveformCtx.stroke();
-        }
-
         // Start bubble generation
         async function startBubbles() {
             if (!isPlaying) {
                 if (!isInitialized) {
-                    await initAudio();
+                    // Initialize everything
+                    async function init() {
+                        // Initialize MIDI first
+                        await initMIDI();
+                        
+                        // Initialize audio
+                        const audioReady = await initAudio();
+                        if (!audioReady) {
+                            showStatus('Error initializing audio', 0);
+                            return;
+                        }
+                        
+                        // Set up UI
+                        document.getElementById('bubbleControls').classList.add('active');
+                        
+                        // Add MIDI output change listener if the element exists
+                        const midiSelect = document.getElementById('midiOutputSelect');
+                        if (midiSelect) {
+                            midiSelect.addEventListener('change', onMIDIOutputChange);
+                        }
+                        
+                        // Start animation
+                        animate();
+                        showStatus('Click to create bubbles', 2000);
+                    }
+                    await init();
                 }
-                animate();
                 isPlaying = true;
-                document.getElementById('bubbleControls').classList.add('active');
                 document.getElementById('status').classList.add('hidden');
             }
         }
@@ -459,38 +662,40 @@
         }
 
         // Pop bubble and trigger audio
-        function popBubble(bubble) {
-            if (bubble.classList.contains('popping')) return;
+        function popBubble(bubbleElement) {
+            // Find bubble data
+            const bubbleData = bubbles.find(b => b.element === bubbleElement);
+            if (!bubbleData) return;
             
-            bubble.classList.add('popping');
+            // Play sound based on x position (frequency) and size (volume)
+            const rect = document.getElementById('waterSurface').getBoundingClientRect();
+            const x = bubbleData.x;
+            const width = rect.width;
+            const volume = bubbleData.size / 40; // Normalize size to 0-1 range
             
-            // Find bubble data and remove from array immediately
-            const bubbleIndex = bubbles.findIndex(b => b.element === bubble);
-            if (bubbleIndex !== -1) {
-                const bubbleData = bubbles[bubbleIndex];
-                
-                // Play audio based on position and size
-                const rect = document.getElementById('waterSurface').getBoundingClientRect();
-                const volume = Math.min(bubbleData.size / 40, 1); // Larger bubbles = louder
-                playTone(bubbleData.x, rect.width, volume);
-                
-                // Chance for bubble to split
-                if (Math.random() < settings.bubbleSplit && bubbleData.size > 15) {
-                    const splitSize = bubbleData.size * 0.6;
-                    setTimeout(() => {
-                        createBubble(bubbleData.x - 20, bubbleData.y, splitSize);
-                        createBubble(bubbleData.x + 20, bubbleData.y, splitSize);
-                    }, 200);
-                }
-                
-                // Remove from array immediately
-                bubbles.splice(bubbleIndex, 1);
+            playTone(x, width, volume);
+            
+            // Send MIDI note if output is selected
+            if (selectedMIDIOutput) {
+                // Map x position to note number (24-96, which is C1-C7)
+                const note = Math.round(24 + ((x / width) * 72));
+                // Map size to velocity (0-127)
+                const velocity = Math.min(127, Math.round(bubbleData.size * 3));
+                sendMIDINote(note, velocity, 300);
             }
             
-            // Remove DOM element after animation
+            // Visual effect
+            bubbleElement.classList.add('popping');
+            
+            // Remove bubble from array and DOM after animation
             setTimeout(() => {
-                if (bubble.parentNode) {
-                    bubble.parentNode.removeChild(bubble);
+                if (bubbleElement.parentNode) {
+                    bubbleElement.parentNode.removeChild(bubbleElement);
+                }
+                // Remove from bubbles array
+                const index = bubbles.findIndex(b => b.element === bubbleElement);
+                if (index > -1) {
+                    bubbles.splice(index, 1);
                 }
             }, 800);
         }
@@ -600,15 +805,17 @@
             }
         });
         
-        // Start button
+        // Button event listeners
         document.getElementById('startBubbles').addEventListener('click', startBubbles);
-        
-        // Stop button
         document.getElementById('stopBubbles').addEventListener('click', stopBubbles);
+        document.getElementById('refreshMIDI').addEventListener('click', refreshMIDI);
         
         // Initialize everything
         async function init() {
-            console.log('Initializing Aqueous...');
+            debugLog('=== Initializing Aqueous ===');
+            
+            // Initialize MIDI immediately
+            await initMIDI();
             
             // Initialize audio on first user interaction
             document.addEventListener('click', async () => {
@@ -619,7 +826,7 @@
             
             animate();
             
-            console.log('Aqueous initialized');
+            debugLog('✅ Aqueous initialized');
         }
 
         // Start when page loads
