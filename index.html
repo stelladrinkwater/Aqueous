@@ -274,6 +274,11 @@
             font-size: 11px;
             color: #88ddff;
             z-index: 20;
+            display: none;
+        }
+
+        .debug-panel.active {
+            display: block;
         }
 
         .debug-panel h4 {
@@ -284,6 +289,28 @@
         .debug-info {
             margin: 5px 0;
             font-family: 'Courier New', monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .debug-toggle {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: #004466;
+            border: 2px solid #00ccff;
+            color: #00ccff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .debug-toggle:hover {
+            background: #006688;
+            border-color: #00aadd;
         }
     </style>
 </head>
@@ -349,6 +376,8 @@
             </div>
         </div>
         
+        <div class="debug-toggle" id="debugToggle">Debug</div>
+        
         <div class="status" id="status">Press Start to Begin<br>Bubbles trigger sound when they pop and hit the surface</div>
     </div>
 
@@ -387,6 +416,12 @@
                 debugInfo.innerHTML += '<br>' + message;
                 debugInfo.scrollTop = debugInfo.scrollHeight;
             }
+        }
+
+        // Toggle debug panel
+        function toggleDebug() {
+            const debugPanel = document.getElementById('debugPanel');
+            debugPanel.classList.toggle('active');
         }
 
         // Show status message
@@ -442,7 +477,7 @@
                 
                 return true;
             } catch (error) {
-                debugLog('❌ Error initializing MIDI: ' + error.message);
+                debugLog('Error initializing MIDI: ' + error.message);
                 console.error('Error initializing MIDI:', error);
                 showStatus('Error initializing MIDI: ' + error.message, 0);
                 return false;
@@ -453,7 +488,7 @@
         function updateMIDIPortList() {
             const select = document.getElementById('midiOutputSelect');
             if (!select) {
-                debugLog('❌ MIDI select element not found');
+                debugLog('MIDI select element not found');
                 return;
             }
             
@@ -466,7 +501,7 @@
             select.innerHTML = '<option value="">-- Select MIDI Output --</option>';
             
             if (!midiAccess) {
-                debugLog('❌ No MIDI access available');
+                debugLog('No MIDI access available');
                 return;
             }
             
@@ -521,17 +556,17 @@
             const output = midiAccess.outputs.get(selectedId);
             if (output) {
                 selectedMIDIOutput = output;
-                debugLog(`✅ MIDI output selected: ${output.name || output.id}`);
+                debugLog(`MIDI output selected: ${output.name || output.id}`);
                 showStatus(`MIDI output: ${output.name || output.id}`, 2000);
             } else {
-                debugLog('❌ Selected MIDI output not found');
+                debugLog('Selected MIDI output not found');
             }
         }
         
         // Send MIDI note with debugging
         function sendMIDINote(note, velocity, duration = 300) {
             if (!selectedMIDIOutput) {
-                debugLog('❌ No MIDI output selected');
+                debugLog('No MIDI output selected');
                 return;
             }
             
@@ -540,17 +575,17 @@
             try {
                 // Note on (0x90 = note on, channel 1)
                 selectedMIDIOutput.send([0x90, note, velocity]);
-                debugLog(`✅ MIDI note on sent: ${note}`);
+                debugLog(`MIDI note on sent: ${note}`);
                 
                 // Note off after duration
                 setTimeout(() => {
                     if (selectedMIDIOutput) {
                         selectedMIDIOutput.send([0x80, note, 0]);
-                        debugLog(`✅ MIDI note off sent: ${note}`);
+                        debugLog(`MIDI note off sent: ${note}`);
                     }
                 }, duration);
             } catch (error) {
-                debugLog(`❌ Error sending MIDI note: ${error.message}`);
+                debugLog(`Error sending MIDI note: ${error.message}`);
             }
         }
         
@@ -687,15 +722,16 @@
             // Visual effect
             bubbleElement.classList.add('popping');
             
-            // Remove bubble from array and DOM after animation
+            // Remove bubble from array immediately to prevent duplicate processing
+            const index = bubbles.findIndex(b => b.element === bubbleElement);
+            if (index > -1) {
+                bubbles.splice(index, 1);
+            }
+            
+            // Remove DOM element after animation
             setTimeout(() => {
                 if (bubbleElement.parentNode) {
                     bubbleElement.parentNode.removeChild(bubbleElement);
-                }
-                // Remove from bubbles array
-                const index = bubbles.findIndex(b => b.element === bubbleElement);
-                if (index > -1) {
-                    bubbles.splice(index, 1);
                 }
             }, 800);
         }
@@ -809,6 +845,7 @@
         document.getElementById('startBubbles').addEventListener('click', startBubbles);
         document.getElementById('stopBubbles').addEventListener('click', stopBubbles);
         document.getElementById('refreshMIDI').addEventListener('click', refreshMIDI);
+        document.getElementById('debugToggle').addEventListener('click', toggleDebug);
         
         // Initialize everything
         async function init() {
@@ -826,7 +863,7 @@
             
             animate();
             
-            debugLog('✅ Aqueous initialized');
+            debugLog('Aqueous initialized');
         }
 
         // Start when page loads
