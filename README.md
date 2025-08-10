@@ -13,6 +13,17 @@ https://freesound.org/people/GregorQuendel/sounds/685055/
 Font is:
 https://www.fontspace.com/sailing-scribe-font-f126927
 
+# Instructions for Use
+
+On macOS, open the webpage [https://stelladrinkwater.github.io/Aqueous/] in Chrome (other browsers may not work). Then, set up the IAC Driver (see the README on GitHub for step-by-step instructions with images). 
+
+On Windows or Linux, you’ll need a virtual MIDI port such as loopMIDI (Windows) or rtpMIDI/a2jmidid (Linux). Windows and Linux setups remain untested as of this iteration of the project. 
+
+Once your virtual MIDI port or IAC driver is ready, load one of the included Decent Sampler patches from the project repository, and set up a MIDI track in your DAW to listen to that virtual MIDI port for notes. 
+
+Velocity is mapped to bubble size and pitch spans an arbitrary 24–72 range (the sampler patch matches this). Notes are 300 ms long. Keep the browser window active (don’t close it, switch tabs, or let it sleep, or else MIDI data flow will stop).
+
+
 ## Instructions for Mac IAC Driver (Virtual Midi) Setup:
 
 1. Cmd + Space search for Audio Midi Setup and open it
