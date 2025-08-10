@@ -102,6 +102,10 @@
             transition: all 0.3s ease;
         }
 
+        .bubble.popping {
+            display: none; /* Instantly hide the bubble */
+        }
+
         .bubble:hover {
             background: #88ddff;
             border-color: #0099cc;
@@ -223,12 +227,12 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 64px;
+            font-size: 88px;
             font-weight: normal;
             letter-spacing: 4px;
             color: #00ccff;
             z-index: 5;
-            font-family: Arial, sans-serif;
+            font-family: 'Sailing Scribble', Arial, sans-serif;
         }
 
         .status {
@@ -265,16 +269,17 @@
 
         .oxygen-data-panel {
             position: absolute;
-            top: 150px;
-            left: 30px;
-            background: rgba(0,30,60,0.9);
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            background: rgba(0, 30, 60, 0.8);
             border: 1px solid #00ccff;
             border-radius: 10px;
             padding: 15px;
-            max-width: 300px;
-            font-size: 11px;
             color: #88ddff;
-            z-index: 20;
+            font-size: 12px;
+            z-index: 10;
+            max-width: 220px;
         }
 
         .oxygen-data-panel h4 {
@@ -438,7 +443,7 @@
         
         <div class="debug-toggle" id="debugToggle">Debug</div>
         
-        <div class="status" id="status">Press Start to Begin<br>Bubbles generated from Saanich Inlet oxygen data</div>
+        <div class="status" id="status">Press Start to Begin<br><br>Bubbles generation influenced by ONC Saanich Inlet oxygen data</div>
     </div>
 
     <script>
@@ -864,23 +869,21 @@
                 sendMIDINote(note, velocity, 300);
             }
             
-            // Visual effect
-            bubbleElement.classList.add('popping');
-            
             // Remove bubble from array immediately
             bubbles.splice(bubbleIndex, 1);
             
-            // Remove DOM element after animation
-            setTimeout(() => {
-                if (bubbleElement.parentNode) {
-                    bubbleElement.parentNode.removeChild(bubbleElement);
-                }
-            }, 800);
+            // Instantly remove the bubble element
+            if (bubbleElement.parentNode) {
+                bubbleElement.parentNode.removeChild(bubbleElement);
+            }
         }
 
         // Update bubble positions - completely isolated movement logic
         function updateBubbles() {
-            const surfaceY = window.innerHeight * 0.3;
+            // Get the actual position of the surface line element
+            const surfaceLine = document.querySelector('.surface-line');
+            const surfaceRect = surfaceLine.getBoundingClientRect();
+            const surfaceY = surfaceRect.top + (surfaceRect.height / 2); // Use middle of the surface line
             
             // Process bubbles in reverse order to safely remove during iteration
             for (let i = bubbles.length - 1; i >= 0; i--) {
@@ -891,14 +894,18 @@
                 bubbleData.y = newY;
                 bubbleData.element.style.top = newY + 'px';
                 
+                // Get bubble's current position relative to viewport
+                const bubbleRect = bubbleData.element.getBoundingClientRect();
+                const bubbleTop = bubbleRect.top;
+                
                 // Log movement for debugging (only occasionally to avoid spam)
                 if (Math.random() < 0.001) {
                     debugLog(`Bubble ${bubbleData.id} at y=${newY.toFixed(1)} with speed=${bubbleData.speed}`);
                 }
                 
-                // Check if bubble reached surface
-                if (newY <= surfaceY) {
-                    debugLog(`Bubble ${bubbleData.id} reached surface at y=${newY}`);
+                // Check if top of bubble reached surface line
+                if (bubbleTop <= surfaceY) {
+                    debugLog(`Bubble ${bubbleData.id} reached surface at y=${bubbleTop.toFixed(1)} (surface at ${surfaceY.toFixed(1)})`);
                     popBubble(bubbleData.element);
                     continue;
                 }
