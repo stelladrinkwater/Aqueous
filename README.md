@@ -40,7 +40,7 @@ Velocity will be proportional to bubble size.
 
 24-72 midi range.
 
-#### Resources Used:
+#### Assets:
 
 Orca calls sound clip pulled from the Orca Behavior Institute:
 https://soundcloud.com/orcabehaviorinstitute/september-13-2024-js-ks-and-ls-at-lime-kiln
