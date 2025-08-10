@@ -4,7 +4,7 @@ https://github.com/user-attachments/assets/dc7b21fd-ac8a-490e-9593-20b88dcd2f78
 
 Bubble-based HTML granular audio processor.
 
-# Instructions for Use
+# Instructions for Use:
 
 On macOS, open the webpage [https://stelladrinkwater.github.io/Aqueous/] in Chrome (other browsers may not work). Then, set up the IAC Driver (see below for step-by-step instructions with images). 
 
@@ -32,7 +32,7 @@ Velocity is mapped to bubble size and pitch spans an arbitrary 24–72 range (th
 7. Select the IAC Driver as the MIDI device in your DAW
 
 
-## Notes:
+#### Notes:
 
 Chrome is the only browser which I can confirm works. I have had issues with Safari and Arc.
 
@@ -40,7 +40,7 @@ Velocity will be proportional to bubble size.
 
 24-72 midi range.
 
-### Resources Used:
+#### Resources Used:
 
 Orca calls sound clip pulled from the Orca Behavior Institute:
 https://soundcloud.com/orcabehaviorinstitute/september-13-2024-js-ks-and-ls-at-lime-kiln
