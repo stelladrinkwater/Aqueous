@@ -1,6 +1,6 @@
 # Aqueous
 
-https://github.com/user-attachments/assets/dc7b21fd-ac8a-490e-9593-20b88dcd2f78
+![Screenshot 2025-08-10 at 3 32 58 PM](https://github.com/user-attachments/assets/67a7b4e3-088c-419c-bb56-a4956ea6bc80)
 
 ## Instructions for Use:
 
