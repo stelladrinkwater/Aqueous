@@ -1,7 +1,5 @@
 # Aqueous
 
-##### Bubble-based HTML granular audio processor.
-
 https://github.com/user-attachments/assets/dc7b21fd-ac8a-490e-9593-20b88dcd2f78
 
 ## Instructions for Use:
