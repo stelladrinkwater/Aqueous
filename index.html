@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aqueous - Bubble Synth</title>
+    <title>Aqueous - Oxygen Data Driven Bubble Sequencer</title>
     <style>
         @font-face {
             font-family: 'Sailing Scribble';
@@ -99,6 +99,7 @@
             cursor: pointer;
             pointer-events: auto;
             z-index: 10;
+            transition: all 0.3s ease;
         }
 
         .bubble:hover {
@@ -262,6 +263,36 @@
             font-size: 12px;
         }
 
+        .oxygen-data-panel {
+            position: absolute;
+            top: 150px;
+            left: 30px;
+            background: rgba(0,30,60,0.9);
+            border: 1px solid #00ccff;
+            border-radius: 10px;
+            padding: 15px;
+            max-width: 300px;
+            font-size: 11px;
+            color: #88ddff;
+            z-index: 20;
+        }
+
+        .oxygen-data-panel h4 {
+            margin-top: 0;
+            color: #00ccff;
+        }
+
+        .oxygen-info {
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .oxygen-value {
+            font-weight: bold;
+            color: #00ccff;
+            transition: color 0.3s ease;
+        }
+
         .debug-panel {
             position: absolute;
             top: 150px;
@@ -348,6 +379,30 @@
             <button class="control-btn" id="refreshMIDI">Refresh MIDI</button>
         </div>
         
+        <div class="oxygen-data-panel" id="oxygenDataPanel">
+            <h4>Saanich Inlet Oxygen Data</h4>
+            <div class="oxygen-info">
+                <div>Current O₂: <span id="currentOxygen" class="oxygen-value">--</span> ml/L</div>
+                <div>Temperature: <span id="currentTemp" class="oxygen-value">--</span> °C</div>
+                <div>Data Point: <span id="currentDataPoint" class="oxygen-value">--</span></div>
+                <div>Status: <span id="oxygenStatus" class="oxygen-value">--</span></div>
+                <div>Update Rate: <span id="updateRate" class="oxygen-value">--</span> sec</div>
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 10px; color: #66ccff;">CSV Line Selection:</label>
+                    <select id="dataSelectionMode" style="margin-left: 5px; background: #004466; color: #00ccff; border: 1px solid #00ccff; border-radius: 3px; font-size: 10px;">
+                        <option value="order">Sequential</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+                <div style="margin-top: 10px; font-size: 10px; color: #66ccff;">
+                    <div>Hypoxic: &lt;1.0 ml/L</div>
+                    <div>Low: 1.0-2.0 ml/L</div>
+                    <div>Moderate: 2.0-3.5 ml/L</div>
+                    <div>High: &gt;3.5 ml/L</div>
+                </div>
+            </div>
+        </div>
+        
         <div class="debug-panel" id="debugPanel">
             <h4>MIDI Debug Info</h4>
             <div class="debug-info" id="debugInfo">Initializing...</div>
@@ -355,30 +410,35 @@
         
         <div class="bubble-controls" id="bubbleControls">
             <div class="control-group">
+                <label class="control-label">Data Speed:</label>
+                <input class="control-slider" id="dataSpeed" type="range" min="0.1" max="5.0" value="1.0" step="0.1">
+                <span class="control-value" id="dataSpeedValue">1.0</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">O₂ Influence:</label>
+                <input class="control-slider" id="oxygenInfluence" type="range" min="0.0" max="2.0" value="1.0" step="0.1">
+                <span class="control-value" id="oxygenInfluenceValue">1.0</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">Base Density:</label>
+                <input class="control-slider" id="bubbleDensity" type="range" min="0.5" max="2.5" value="1.0" step="0.1">
+                <span class="control-value" id="bubbleDensityValue">1.0</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">Base Size:</label>
+                <input class="control-slider" id="bubbleSize" type="range" min="10" max="40" value="20" step="1">
+                <span class="control-value" id="bubbleSizeValue">20</span>
+            </div>
+            <div class="control-group">
                 <label class="control-label">Bubble Speed:</label>
-                <input class="control-slider" id="bubbleSpeed" type="range" min="0.5" max="2.5" value="1.5" step="0.1">
-                <span class="control-value" id="bubbleSpeedValue">1.5</span>
-            </div>
-            <div class="control-group">
-                <label class="control-label">Bubble Size:</label>
-                <input class="control-slider" id="bubbleSize" type="range" min="10" max="40" value="25" step="1">
-                <span class="control-value" id="bubbleSizeValue">25</span>
-            </div>
-            <div class="control-group">
-                <label class="control-label">Bubble Density:</label>
-                <input class="control-slider" id="bubbleDensity" type="range" min="0.5" max="2.5" value="1.2" step="0.1">
-                <span class="control-value" id="bubbleDensityValue">1.2</span>
-            </div>
-            <div class="control-group">
-                <label class="control-label">Split Chance:</label>
-                <input class="control-slider" id="bubbleSplit" type="range" min="0" max="0.5" value="0.1" step="0.05">
-                <span class="control-value" id="bubbleSplitValue">0.1</span>
+                <input class="control-slider" id="bubbleSpeed" type="range" min="0.2" max="3.0" value="1.0" step="0.1">
+                <span class="control-value" id="bubbleSpeedValue">1.0</span>
             </div>
         </div>
         
         <div class="debug-toggle" id="debugToggle">Debug</div>
         
-        <div class="status" id="status">Press Start to Begin<br>Bubbles trigger sound when they pop and hit the surface</div>
+        <div class="status" id="status">Press Start to Begin<br>Bubbles generated from Saanich Inlet oxygen data</div>
     </div>
 
     <script>
@@ -393,24 +453,81 @@
         let selectedMIDIOutput = null;
         let midiAccess = null;
         
+        // Oxygen data variables
+        let oxygenData = [];
+        let currentDataIndex = 0;
+        let lastDataUpdate = Date.now();
+        let dataUpdateInterval = 2000; // Update every 2 seconds
+        let dataSelectionMode = 'order'; // 'order' or 'random'
+        
         // Settings
         let settings = {
-            bubbleSpeed: 1.5,
-            bubbleSize: 25,
-            bubbleDensity: 1.2,
-            bubbleSplit: 0.1,
+            dataSpeed: 1.0,
+            oxygenInfluence: 1.0,
+            bubbleDensity: 1.0,
+            bubbleSize: 20,
             bubbleLife: 5000,
-            delayTime: 0.5,
-            feedback: 0.4
+            bubbleSpeed: 1.0 // Constant bubble speed
         };
-        
-        // Tide state
-        let isTideLeft = true;
-        let lastTideChange = Date.now();
+
+        // Saanich Inlet Oxygen Data (parsed from CSV)
+        const saanichOxygenData = [
+            {time: "2024-03-22T00:07:30.000Z", oxygen: 0.882438149, temp: 9.370890793},
+            {time: "2024-03-22T01:37:30.000Z", oxygen: 0.783828462, temp: 9.404406997},
+            {time: "2024-03-22T03:07:30.000Z", oxygen: 1.083650069, temp: 9.304305812},
+            {time: "2024-03-22T04:22:30.000Z", oxygen: 3.058115497, temp: 8.823300012},
+            {time: "2024-03-22T05:52:30.000Z", oxygen: 2.868000344, temp: 8.9402238},
+            {time: "2024-03-22T07:22:30.000Z", oxygen: 3.862354882, temp: 8.646217557},
+            {time: "2024-03-22T08:37:30.000Z", oxygen: 4.07781168, temp: 8.60153096},
+            {time: "2024-03-22T10:07:30.000Z", oxygen: 1.48607307, temp: 9.357419344},
+            {time: "2024-03-22T11:37:30.000Z", oxygen: 0.452415738, temp: 9.530343131},
+            {time: "2024-03-22T12:52:30.000Z", oxygen: 0.540815037, temp: 9.501470573},
+            {time: "2024-03-22T14:22:30.000Z", oxygen: 0.80499791, temp: 9.414977698},
+            {time: "2024-03-22T15:52:30.000Z", oxygen: 0.956592125, temp: 9.354143189},
+            {time: "2024-03-22T17:07:30.000Z", oxygen: 1.754801191, temp: 9.176901501},
+            {time: "2024-03-22T18:37:30.000Z", oxygen: 1.818903374, temp: 9.142125973},
+            {time: "2024-03-22T20:07:30.000Z", oxygen: 3.047804553, temp: 8.872187127},
+            {time: "2024-03-22T21:22:30.000Z", oxygen: 3.05428795, temp: 8.85312853},
+            {time: "2024-03-22T22:52:30.000Z", oxygen: 2.249427971, temp: 9.144660675},
+            {time: "2024-03-23T00:22:30.000Z", oxygen: 1.253889294, temp: 9.22404126},
+            {time: "2024-03-23T01:37:30.000Z", oxygen: 0.88795647, temp: 9.358875499},
+            {time: "2024-03-23T03:07:30.000Z", oxygen: 0.846542562, temp: 9.378174542},
+            {time: "2024-03-23T04:37:30.000Z", oxygen: 1.369649118, temp: 9.289766409},
+            {time: "2024-03-23T05:52:30.000Z", oxygen: 2.531692175, temp: 8.949592284},
+            {time: "2024-03-23T07:22:30.000Z", oxygen: 3.001502991, temp: 8.895932996},
+            {time: "2024-03-23T08:52:30.000Z", oxygen: 2.874649392, temp: 8.74613502},
+            {time: "2024-03-23T10:07:30.000Z", oxygen: 3.660916675, temp: 8.661958891},
+            {time: "2024-03-23T11:37:30.000Z", oxygen: 0.646841914, temp: 9.463127887},
+            {time: "2024-03-23T13:07:30.000Z", oxygen: 0.558067515, temp: 9.486859502},
+            {time: "2024-03-23T14:22:30.000Z", oxygen: 0.521151128, temp: 9.499278572},
+            {time: "2024-03-23T15:52:30.000Z", oxygen: 0.939617714, temp: 9.383273953},
+            {time: "2024-03-23T17:22:30.000Z", oxygen: 1.470320045, temp: 9.246905786},
+            {time: "2024-03-23T18:37:30.000Z", oxygen: 1.975708685, temp: 9.116425852},
+            {time: "2024-03-23T20:07:30.000Z", oxygen: 2.180951877, temp: 9.085679615},
+            {time: "2024-03-23T21:37:30.000Z", oxygen: 2.643577346, temp: 8.92869633},
+            {time: "2024-03-23T22:52:30.000Z", oxygen: 3.180289296, temp: 8.830844917},
+            {time: "2024-03-24T00:22:30.000Z", oxygen: 1.469155123, temp: 9.303942262},
+            {time: "2024-03-24T01:52:30.000Z", oxygen: 0.655862514, temp: 9.458748204},
+            {time: "2024-03-24T03:07:30.000Z", oxygen: 0.695216037, temp: 9.432115448},
+            {time: "2024-03-24T04:37:30.000Z", oxygen: 1.120191674, temp: 9.341769016},
+            {time: "2024-03-24T06:07:30.000Z", oxygen: 1.175815399, temp: 9.265424686},
+            {time: "2024-03-24T07:22:30.000Z", oxygen: 2.523208411, temp: 9.019564111},
+            {time: "2024-03-24T08:52:30.000Z", oxygen: 3.450008331, temp: 8.741832447},
+            {time: "2024-03-24T10:22:30.000Z", oxygen: 3.513507873, temp: 8.726060235},
+            {time: "2024-03-24T11:37:30.000Z", oxygen: 2.021243286, temp: 9.042674175},
+            {time: "2024-03-24T13:07:30.000Z", oxygen: 1.553168235, temp: 9.170016463},
+            {time: "2024-03-24T14:37:30.000Z", oxygen: 0.559913309, temp: 9.504393428},
+            {time: "2024-03-24T15:52:30.000Z", oxygen: 0.662532407, temp: 9.445976864},
+            {time: "2024-03-24T17:22:30.000Z", oxygen: 0.717677451, temp: 9.402949188},
+            {time: "2024-03-24T18:52:30.000Z", oxygen: 0.983732452, temp: 9.355599225},
+            {time: "2024-03-24T20:07:30.000Z", oxygen: 1.768321798, temp: 9.203365495},
+            {time: "2024-03-24T21:37:30.000Z", oxygen: 2.494814691, temp: 8.980956443},
+            {time: "2024-03-24T23:07:30.000Z", oxygen: 3.357231653, temp: 8.733945577}
+        ];
 
         // Debug logging function
         function debugLog(message) {
-            console.log('[MIDI Debug]:', message);
+            console.log('[Debug]:', message);
             const debugInfo = document.getElementById('debugInfo');
             if (debugInfo) {
                 debugInfo.innerHTML += '<br>' + message;
@@ -436,6 +553,57 @@
             }
         }
 
+        // Get oxygen status text
+        function getOxygenStatusText(oxygenValue) {
+            if (oxygenValue < 1.0) return 'Hypoxic';
+            if (oxygenValue < 2.0) return 'Low Oxygen';
+            if (oxygenValue < 3.5) return 'Moderate';
+            return 'High Oxygen';
+        }
+
+        // Update current oxygen data display - now with configurable selection mode
+        function updateOxygenDisplay() {
+            if (saanichOxygenData.length === 0) return null;
+
+            // Calculate data progression based on time and speed
+            const currentTime = Date.now();
+            const timeSinceStart = (currentTime - lastDataUpdate) * settings.dataSpeed;
+            
+            if (timeSinceStart >= dataUpdateInterval) {
+                // Choose next data point based on selection mode
+                if (dataSelectionMode === 'random') {
+                    currentDataIndex = Math.floor(Math.random() * saanichOxygenData.length);
+                } else {
+                    currentDataIndex = (currentDataIndex + 1) % saanichOxygenData.length;
+                }
+                lastDataUpdate = currentTime;
+            }
+
+            const currentData = saanichOxygenData[currentDataIndex];
+            const statusText = getOxygenStatusText(currentData.oxygen);
+
+            // Update the display elements with smooth transitions
+            const oxygenElement = document.getElementById('currentOxygen');
+            const tempElement = document.getElementById('currentTemp');
+            const dataPointElement = document.getElementById('currentDataPoint');
+            const statusElement = document.getElementById('oxygenStatus');
+            const updateRateElement = document.getElementById('updateRate');
+
+            oxygenElement.textContent = currentData.oxygen.toFixed(3);
+            tempElement.textContent = currentData.temp.toFixed(2);
+            dataPointElement.textContent = `${currentDataIndex + 1}/${saanichOxygenData.length}`;
+            statusElement.textContent = statusText;
+            updateRateElement.textContent = (dataUpdateInterval / 1000 / settings.dataSpeed).toFixed(1);
+
+            // Add visual feedback for value changes
+            oxygenElement.style.color = '#00ffcc';
+            setTimeout(() => {
+                oxygenElement.style.color = '#00ccff';
+            }, 200);
+
+            return currentData;
+        }
+
         // Initialize Web MIDI API with better error handling
         async function initMIDI() {
             debugLog('Checking MIDI support...');
@@ -449,27 +617,14 @@
                 
                 debugLog('✅ Web MIDI API supported, requesting access...');
                 
-                // Request MIDI access with sysex: true for better compatibility
                 midiAccess = await navigator.requestMIDIAccess({ sysex: false });
                 
                 debugLog('✅ MIDI access granted');
                 debugLog(`Inputs found: ${midiAccess.inputs.size}`);
                 debugLog(`Outputs found: ${midiAccess.outputs.size}`);
                 
-                // List all available inputs and outputs for debugging
-                debugLog('--- Available MIDI Inputs ---');
-                midiAccess.inputs.forEach((input, key) => {
-                    debugLog(`Input: ${input.name} (${input.id}) - ${input.state}`);
-                });
-                
-                debugLog('--- Available MIDI Outputs ---');
-                midiAccess.outputs.forEach((output, key) => {
-                    debugLog(`Output: ${output.name} (${output.id}) - ${output.state}`);
-                });
-                
                 updateMIDIPortList();
                 
-                // Listen for MIDI device changes
                 midiAccess.onstatechange = (event) => {
                     debugLog(`MIDI device state changed: ${event.port.name} - ${event.port.state}`);
                     updateMIDIPortList();
@@ -484,7 +639,7 @@
             }
         }
         
-        // Update the MIDI port dropdown with better debugging
+        // Update the MIDI port dropdown
         function updateMIDIPortList() {
             const select = document.getElementById('midiOutputSelect');
             if (!select) {
@@ -492,36 +647,20 @@
                 return;
             }
             
-            debugLog('Updating MIDI port list...');
-            
-            // Save current selection
             const currentId = select.value;
-            
-            // Clear existing options
             select.innerHTML = '<option value="">-- Select MIDI Output --</option>';
             
-            if (!midiAccess) {
-                debugLog('No MIDI access available');
-                return;
-            }
+            if (!midiAccess) return;
             
-            // Add available outputs
             const outputs = Array.from(midiAccess.outputs.values());
-            debugLog(`Found ${outputs.length} MIDI outputs`);
-            
             let foundPrevious = false;
-            let addedCount = 0;
             
             outputs.forEach(output => {
-                debugLog(`Adding output: ${output.name} (${output.id}) - state: ${output.state}`);
-                
-                // Only add connected outputs
                 if (output.state === 'connected') {
                     const option = document.createElement('option');
                     option.value = output.id;
                     option.textContent = output.name || output.id;
                     select.appendChild(option);
-                    addedCount++;
                     
                     if (output.id === currentId) {
                         option.selected = true;
@@ -531,12 +670,8 @@
                 }
             });
             
-            debugLog(`Added ${addedCount} connected MIDI outputs to dropdown`);
-            
-            // If previous selection is no longer available, clear it
             if (currentId && !foundPrevious) {
                 selectedMIDIOutput = null;
-                debugLog('Previous MIDI selection no longer available');
             }
         }
         
@@ -545,43 +680,27 @@
             const select = event.target;
             const selectedId = select.value;
             
-            debugLog(`MIDI output selection changed to: ${selectedId}`);
-            
             if (!selectedId) {
                 selectedMIDIOutput = null;
-                debugLog('MIDI output cleared');
                 return;
             }
             
             const output = midiAccess.outputs.get(selectedId);
             if (output) {
                 selectedMIDIOutput = output;
-                debugLog(`MIDI output selected: ${output.name || output.id}`);
                 showStatus(`MIDI output: ${output.name || output.id}`, 2000);
-            } else {
-                debugLog('Selected MIDI output not found');
             }
         }
         
-        // Send MIDI note with debugging
+        // Send MIDI note
         function sendMIDINote(note, velocity, duration = 300) {
-            if (!selectedMIDIOutput) {
-                debugLog('No MIDI output selected');
-                return;
-            }
-            
-            debugLog(`Sending MIDI note: ${note}, velocity: ${velocity}, duration: ${duration}ms`);
+            if (!selectedMIDIOutput) return;
             
             try {
-                // Note on (0x90 = note on, channel 1)
                 selectedMIDIOutput.send([0x90, note, velocity]);
-                debugLog(`MIDI note on sent: ${note}`);
-                
-                // Note off after duration
                 setTimeout(() => {
                     if (selectedMIDIOutput) {
                         selectedMIDIOutput.send([0x80, note, 0]);
-                        debugLog(`MIDI note off sent: ${note}`);
                     }
                 }, duration);
             } catch (error) {
@@ -601,7 +720,6 @@
                 if (!audioContext) {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     
-                    // Resume audio context on user interaction
                     document.addEventListener('click', async () => {
                         if (audioContext.state === 'suspended') {
                             await audioContext.resume();
@@ -621,30 +739,28 @@
         async function startBubbles() {
             if (!isPlaying) {
                 if (!isInitialized) {
-                    // Initialize everything
                     async function init() {
-                        // Initialize MIDI first
                         await initMIDI();
                         
-                        // Initialize audio
                         const audioReady = await initAudio();
                         if (!audioReady) {
                             showStatus('Error initializing audio', 0);
                             return;
                         }
                         
-                        // Set up UI
                         document.getElementById('bubbleControls').classList.add('active');
                         
-                        // Add MIDI output change listener if the element exists
                         const midiSelect = document.getElementById('midiOutputSelect');
                         if (midiSelect) {
                             midiSelect.addEventListener('change', onMIDIOutputChange);
                         }
                         
-                        // Start animation
+                        // Reset data playback
+                        currentDataIndex = 0;
+                        lastDataUpdate = Date.now();
+                        
                         animate();
-                        showStatus('Click to create bubbles', 2000);
+                        showStatus('Oxygen data-driven bubble generation active', 3000);
                     }
                     await init();
                 }
@@ -660,7 +776,6 @@
                 isPlaying = false;
             }
             
-            // Clear all bubbles from the array and DOM
             bubbles.forEach(bubble => {
                 if (bubble.element && bubble.element.parentNode) {
                     bubble.element.remove();
@@ -671,13 +786,27 @@
             document.getElementById('status').classList.remove('hidden');
         }
 
-        // Create bubble at position
-        function createBubble(x, y, size = null) {
+        // Create bubble at position with oxygen-influenced properties (no color coding)
+        function createBubble(x, y, oxygenData = null) {
             const waterSurface = document.getElementById('waterSurface');
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
             
-            const bubbleSize = size || settings.bubbleSize + (Math.random() * 10 - 5);
+            let bubbleSize;
+            
+            if (oxygenData) {
+                // Size influenced by oxygen concentration (higher oxygen = larger bubbles)
+                const oxygenMultiplier = Math.max(0.3, Math.min(2.0, oxygenData.oxygen / 2.0));
+                bubbleSize = settings.bubbleSize * oxygenMultiplier * (0.8 + Math.random() * 0.4);
+                
+                // Store oxygen data for MIDI mapping
+                bubble.oxygenValue = oxygenData.oxygen;
+                bubble.temperature = oxygenData.temp;
+            } else {
+                bubbleSize = settings.bubbleSize + (Math.random() * 10 - 5);
+                bubble.oxygenValue = 2.0; // Default moderate level
+            }
+            
             bubble.style.width = bubbleSize + 'px';
             bubble.style.height = bubbleSize + 'px';
             bubble.style.left = x + 'px';
@@ -686,47 +815,60 @@
             bubble.addEventListener('click', () => popBubble(bubble));
             
             waterSurface.appendChild(bubble);
-            bubbles.push({
+            
+            // Create bubble object with fixed speed that never changes
+            const bubbleObject = {
                 element: bubble,
                 x: x,
                 y: y,
                 size: bubbleSize,
-                speed: 0.5 + Math.random() * 0.5,
-                created: Date.now()
-            });
+                speed: settings.bubbleSpeed, // This speed will NEVER change
+                created: Date.now(),
+                oxygenValue: bubble.oxygenValue,
+                temperature: bubble.temperature || 9.0,
+                id: Date.now() + Math.random() // Unique ID for debugging
+            };
+            
+            bubbles.push(bubbleObject);
+            
+            debugLog(`Created bubble ${bubbleObject.id} at y=${y} with speed=${bubbleObject.speed}`);
         }
 
-        // Pop bubble and trigger audio
+        // Pop bubble and trigger audio/MIDI based on oxygen data
         function popBubble(bubbleElement) {
-            // Find bubble data
-            const bubbleData = bubbles.find(b => b.element === bubbleElement);
-            if (!bubbleData) return;
+            const bubbleIndex = bubbles.findIndex(b => b.element === bubbleElement);
+            if (bubbleIndex === -1) return;
             
-            // Play sound based on x position (frequency) and size (volume)
+            const bubbleData = bubbles[bubbleIndex];
             const rect = document.getElementById('waterSurface').getBoundingClientRect();
             const x = bubbleData.x;
             const width = rect.width;
-            const volume = bubbleData.size / 40; // Normalize size to 0-1 range
             
-            playTone(x, width, volume);
+            // Volume influenced by oxygen level and size
+            const oxygenVolume = Math.max(0.1, Math.min(1.0, bubbleData.oxygenValue / 4.0));
+            const sizeVolume = bubbleData.size / 50;
+            const finalVolume = oxygenVolume * sizeVolume * 0.7;
             
-            // Send MIDI note if output is selected
+            playTone(x, width, finalVolume, bubbleData.oxygenValue);
+            
+            // MIDI note influenced by position and oxygen data
             if (selectedMIDIOutput) {
-                // Map x position to note number (24-96, which is C1-C7)
-                const note = Math.round(24 + ((x / width) * 72));
-                // Map size to velocity (0-127)
-                const velocity = Math.min(127, Math.round(bubbleData.size * 3));
+                // Map x position to note (24-96)
+                const baseNote = Math.round(24 + ((x / width) * 48));
+                // Add oxygen influence to pitch (higher oxygen = higher pitch)
+                const oxygenPitchOffset = Math.round(bubbleData.oxygenValue * 6);
+                const note = Math.min(96, baseNote + oxygenPitchOffset);
+                
+                // Velocity based on size and oxygen level
+                const velocity = Math.min(127, Math.round((bubbleData.size + bubbleData.oxygenValue * 10) * 2));
                 sendMIDINote(note, velocity, 300);
             }
             
             // Visual effect
             bubbleElement.classList.add('popping');
             
-            // Remove bubble from array immediately to prevent duplicate processing
-            const index = bubbles.findIndex(b => b.element === bubbleElement);
-            if (index > -1) {
-                bubbles.splice(index, 1);
-            }
+            // Remove bubble from array immediately
+            bubbles.splice(bubbleIndex, 1);
             
             // Remove DOM element after animation
             setTimeout(() => {
@@ -736,91 +878,132 @@
             }, 800);
         }
 
-        // Update bubble positions
+        // Update bubble positions - completely isolated movement logic
         function updateBubbles() {
-            bubbles.forEach(bubbleData => {
-                bubbleData.y -= bubbleData.speed * settings.bubbleSpeed;
-                bubbleData.element.style.top = bubbleData.y + 'px';
+            const surfaceY = window.innerHeight * 0.3;
+            
+            // Process bubbles in reverse order to safely remove during iteration
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const bubbleData = bubbles[i];
                 
-                // Check if bubble reached surface (30% from top)
-                const surfaceY = window.innerHeight * 0.3;
-                if (bubbleData.y <= surfaceY) {
-                    popBubble(bubbleData.element);
+                // Move bubble up by EXACTLY its original speed - no modifications
+                const newY = bubbleData.y - bubbleData.speed;
+                bubbleData.y = newY;
+                bubbleData.element.style.top = newY + 'px';
+                
+                // Log movement for debugging (only occasionally to avoid spam)
+                if (Math.random() < 0.001) {
+                    debugLog(`Bubble ${bubbleData.id} at y=${newY.toFixed(1)} with speed=${bubbleData.speed}`);
                 }
                 
-                // Remove old bubbles
+                // Check if bubble reached surface
+                if (newY <= surfaceY) {
+                    debugLog(`Bubble ${bubbleData.id} reached surface at y=${newY}`);
+                    popBubble(bubbleData.element);
+                    continue;
+                }
+                
+                // Remove bubbles that are too old
                 if (Date.now() - bubbleData.created > settings.bubbleLife) {
+                    debugLog(`Bubble ${bubbleData.id} expired after ${settings.bubbleLife}ms`);
                     if (bubbleData.element.parentNode) {
                         bubbleData.element.parentNode.removeChild(bubbleData.element);
                     }
+                    bubbles.splice(i, 1);
                 }
-            });
-            
-            // Clean up removed bubbles
-            bubbles = bubbles.filter(bubbleData => 
-                bubbleData.element.parentNode && 
-                Date.now() - bubbleData.created <= settings.bubbleLife
-            );
-        }
-
-        // Generate random bubbles
-        function generateBubbles() {
-            if (!isPlaying || !bubbleGenerationActive) return;
-            
-            const chance = 0.02 * settings.bubbleDensity;
-            if (Math.random() < chance) {
-                const waterSurface = document.getElementById('waterSurface');
-                const x = Math.random() * waterSurface.offsetWidth;
-                const y = waterSurface.offsetHeight * 0.9;
-                createBubble(x, y);
             }
         }
 
-        // Play a sine tone when bubble pops
-        async function playTone(x, width, volume = 0.3) {
+        // Generate oxygen data-driven bubbles
+        function generateBubbles() {
+            if (!isPlaying || !bubbleGenerationActive) return;
+            
+            const currentData = updateOxygenDisplay();
+            if (!currentData) return;
+            
+            // Density influenced by oxygen concentration and temperature
+            // Higher oxygen = more bubbles (more biological activity)
+            // Lower temperature = fewer bubbles (less activity)
+            const oxygenDensityMultiplier = Math.max(0.2, currentData.oxygen / 2.0) * settings.oxygenInfluence;
+            const tempMultiplier = Math.max(0.5, currentData.temp / 10.0);
+            const totalDensity = settings.bubbleDensity * oxygenDensityMultiplier * tempMultiplier * 0.015;
+            
+            if (Math.random() < totalDensity) {
+                const waterSurface = document.getElementById('waterSurface');
+                const x = Math.random() * waterSurface.offsetWidth;
+                const y = waterSurface.offsetHeight * 0.9;
+                createBubble(x, y, currentData);
+            }
+            
+            // Occasionally create multiple bubbles for high oxygen events
+            if (currentData.oxygen > 3.0 && Math.random() < 0.003) {
+                for (let i = 0; i < 3; i++) {
+                    const x = Math.random() * waterSurface.offsetWidth;
+                    const y = waterSurface.offsetHeight * (0.85 + Math.random() * 0.1);
+                    setTimeout(() => createBubble(x, y, currentData), i * 100);
+                }
+            }
+        }
+
+        // Play tone with oxygen-influenced characteristics
+        async function playTone(x, width, volume = 0.3, oxygenLevel = 2.0) {
             try {
                 if (!audioContext) {
                     const success = await initAudio();
                     if (!success) return;
                 }
                 
-                // Ensure audio context is running
                 if (audioContext.state === 'suspended') {
                     await audioContext.resume();
                 }
                 
-                // Calculate frequency based on x position (200Hz to 5000Hz) using logarithmic scale
+                // Base frequency mapping
                 const minFreq = 200;
                 const maxFreq = 5000;
-                const position = x / width; // 0 to 1
-                const frequency = minFreq * Math.pow(maxFreq / minFreq, position);
+                const position = x / width;
+                let frequency = minFreq * Math.pow(maxFreq / minFreq, position);
                 
-                // Create oscillator and gain node
+                // Oxygen influence on frequency (higher oxygen = brighter harmonics)
+                const oxygenFreqMultiplier = 1.0 + (oxygenLevel - 2.0) * 0.1;
+                frequency *= oxygenFreqMultiplier;
+                
+                // Create oscillator with oxygen-influenced timbre
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
-                // Configure oscillator
-                oscillator.type = 'sine';
+                // Waveform based on oxygen level
+                if (oxygenLevel < 1.0) {
+                    oscillator.type = 'sawtooth'; // Harsh for hypoxic
+                } else if (oxygenLevel < 2.0) {
+                    oscillator.type = 'square'; // Warmer for low oxygen
+                } else if (oxygenLevel < 3.5) {
+                    oscillator.type = 'sine'; // Pure for moderate
+                } else {
+                    oscillator.type = 'triangle'; // Bright for high oxygen
+                }
+                
                 oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
                 
-                // Configure gain envelope with volume control
-                gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                // Envelope influenced by oxygen level
+                const attackTime = Math.max(0.01, (4.0 - oxygenLevel) * 0.05);
+                const decayTime = Math.max(0.2, oxygenLevel * 0.1);
                 
-                // Connect nodes
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + attackTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + decayTime);
+                
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 
-                // Start and stop
                 oscillator.start();
-                oscillator.stop(audioContext.currentTime + 0.5);
+                oscillator.stop(audioContext.currentTime + decayTime);
                 
             } catch (error) {
                 console.error('Error playing tone:', error);
             }
         }
 
-        // Main animation loop
+        // Main animation loop - now continuously updates oxygen data
         function animate() {
             updateBubbles();
             generateBubbles();
@@ -833,11 +1016,10 @@
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            // Only create bubble if click is within water surface
             if (y > rect.height * 0.3) {
-                createBubble(x, y);
-                // Play tone at click position
-                playTone(x, rect.width);
+                const currentData = saanichOxygenData[currentDataIndex];
+                createBubble(x, y, currentData);
+                playTone(x, rect.width, 0.5, currentData ? currentData.oxygen : 2.0);
             }
         });
         
@@ -847,37 +1029,16 @@
         document.getElementById('refreshMIDI').addEventListener('click', refreshMIDI);
         document.getElementById('debugToggle').addEventListener('click', toggleDebug);
         
-        // Initialize everything
-        async function init() {
-            debugLog('=== Initializing Aqueous ===');
-            
-            // Initialize MIDI immediately
-            await initMIDI();
-            
-            // Initialize audio on first user interaction
-            document.addEventListener('click', async () => {
-                if (!isInitialized) {
-                    await initAudio();
-                }
-            }, { once: true });
-            
-            animate();
-            
-            debugLog('Aqueous initialized');
-        }
-
-        // Start when page loads
-        document.addEventListener('DOMContentLoaded', init);
-        
-        // Bubble controls
-        document.getElementById('bubbleSpeed').addEventListener('input', (e) => {
-            settings.bubbleSpeed = parseFloat(e.target.value);
-            document.getElementById('bubbleSpeedValue').innerText = settings.bubbleSpeed.toFixed(1);
+        // Control event listeners with data speed affecting update rate
+        document.getElementById('dataSpeed').addEventListener('input', (e) => {
+            settings.dataSpeed = parseFloat(e.target.value);
+            document.getElementById('dataSpeedValue').innerText = settings.dataSpeed.toFixed(1);
+            // Data speed affects how quickly we move through the data
         });
         
-        document.getElementById('bubbleSize').addEventListener('input', (e) => {
-            settings.bubbleSize = parseInt(e.target.value);
-            document.getElementById('bubbleSizeValue').innerText = settings.bubbleSize;
+        document.getElementById('oxygenInfluence').addEventListener('input', (e) => {
+            settings.oxygenInfluence = parseFloat(e.target.value);
+            document.getElementById('oxygenInfluenceValue').innerText = settings.oxygenInfluence.toFixed(1);
         });
         
         document.getElementById('bubbleDensity').addEventListener('input', (e) => {
@@ -885,10 +1046,56 @@
             document.getElementById('bubbleDensityValue').innerText = settings.bubbleDensity.toFixed(1);
         });
         
-        document.getElementById('bubbleSplit').addEventListener('input', (e) => {
-            settings.bubbleSplit = parseFloat(e.target.value);
-            document.getElementById('bubbleSplitValue').innerText = settings.bubbleSplit.toFixed(2);
+        document.getElementById('bubbleSize').addEventListener('input', (e) => {
+            settings.bubbleSize = parseInt(e.target.value);
+            document.getElementById('bubbleSizeValue').innerText = settings.bubbleSize;
         });
+
+        document.getElementById('bubbleSpeed').addEventListener('input', (e) => {
+            const newSpeed = parseFloat(e.target.value);
+            settings.bubbleSpeed = newSpeed;
+            document.getElementById('bubbleSpeedValue').innerText = newSpeed.toFixed(1);
+            
+            // DO NOT update existing bubbles - they keep their original speed
+            // Only new bubbles will use the new speed setting
+            debugLog(`Bubble speed setting changed to ${newSpeed} (existing bubbles keep their original speed)`);
+        });
+
+        document.getElementById('dataSelectionMode').addEventListener('change', (e) => {
+            dataSelectionMode = e.target.value;
+            debugLog(`CSV line selection mode changed to: ${dataSelectionMode}`);
+        });
+
+        // Initialize everything
+        async function init() {
+            debugLog('=== Initializing Oxygen-Driven Aqueous ===');
+            
+            await initMIDI();
+            
+            document.addEventListener('click', async () => {
+                if (!isInitialized) {
+                    await initAudio();
+                }
+            }, { once: true });
+            
+            // Start with first data point and begin continuous updates
+            updateOxygenDisplay();
+            
+            // Start continuous oxygen data updates even when not playing
+            setInterval(() => {
+                if (isPlaying) {
+                    updateOxygenDisplay();
+                }
+            }, 100); // Update display every 100ms for smooth transitions
+            
+            animate();
+            
+            debugLog('Oxygen-driven sequencer initialized with ' + saanichOxygenData.length + ' data points');
+        }
+
+        // Start when page loads
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
+        
