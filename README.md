@@ -1,10 +1,10 @@
 # Aqueous
 
+##### Bubble-based HTML granular audio processor.
+
 https://github.com/user-attachments/assets/dc7b21fd-ac8a-490e-9593-20b88dcd2f78
 
-Bubble-based HTML granular audio processor.
-
-# Instructions for Use:
+## Instructions for Use:
 
 On macOS, open the webpage [https://stelladrinkwater.github.io/Aqueous/] in Chrome (other browsers may not work). Then, set up the IAC Driver (see below for step-by-step instructions with images). 
 
@@ -15,7 +15,7 @@ Once your virtual MIDI port or IAC driver is ready, load one of the included sam
 Velocity is mapped to bubble size and pitch spans an arbitrary 24–72 range (the sampler patch matches this). Notes are 300 ms long. Keep the browser window active (don’t close it, switch tabs, or let it sleep, or else MIDI data flow will stop).
 
 
-## Instructions for Mac IAC Driver (Virtual Midi) Setup:
+### Instructions for Mac IAC Driver (Virtual Midi) Setup:
 
 1. Cmd + Space search for Audio Midi Setup and open it
    
