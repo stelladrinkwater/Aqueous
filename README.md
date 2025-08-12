@@ -4,7 +4,7 @@
 
 ## Instructions for Use:
 
-On macOS, open the webpage [https://stelladrinkwater.github.io/Aqueous/] in Chrome (other browsers may not work). Then, set up the IAC Driver (see below for step-by-step instructions with images). 
+On macOS, open the [webpage](https://stelladrinkwater.github.io/Aqueous/) in Chrome (other browsers may not work). Then, set up the IAC Driver (see below for step-by-step instructions with images). 
 
 On Windows or Linux, you’ll need a virtual MIDI port such as loopMIDI (Windows) or rtpMIDI/a2jmidid (Linux). Windows and Linux setups remain untested as of this iteration of the project. 
 
